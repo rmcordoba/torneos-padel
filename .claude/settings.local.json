@@ -1,0 +1,22 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npx tsc *)",
+      "Bash(./node_modules/.bin/tsc --noEmit)",
+      "Bash(node_modules/.bin/next build *)",
+      "Bash(node_modules/.bin/tsc.cmd --noEmit)",
+      "Bash(npx prisma *)",
+      "Bash(npm run *)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\" http://localhost:3000)",
+      "Bash(grep -v \"^$\")",
+      "Bash(xargs grep *)",
+      "Bash(npx next *)",
+      "Bash(grep -v \"//.*V2\")",
+      "Bash(xargs ls *)",
+      "Bash(npm install *)",
+      "Bash(npm list *)",
+      "Bash(node --max-old-space-size=512 node_modules/typescript/bin/tsc --noEmit --skipLibCheck)",
+      "Bash(npx ts-node *)"
+    ]
+  }
+}

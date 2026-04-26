@@ -1,0 +1,807 @@
+// Torneos de Pádel - Prisma Schema
+// Stack: PostgreSQL + Prisma + Auth.js v5
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// ENUMS
+// ─────────────────────────────────────────────────────────────────────────────
+
+enum SystemRole {
+  SUPER_ADMIN
+  PLAYER
+}
+
+enum OrganizerRole {
+  OWNER
+  ORGANIZER
+  COLLABORATOR
+}
+
+enum OrganizerPermission {
+  MANAGE_TOURNAMENTS
+  MANAGE_REGISTRATIONS
+  MANAGE_RESULTS
+  MANAGE_SCHEDULE
+  MANAGE_VENUES
+  MANAGE_CATEGORIES
+  VIEW_REPORTS
+  MANAGE_COLLABORATORS
+}
+
+enum Gender {
+  MALE
+  FEMALE
+  MIXED
+  OPEN
+}
+
+enum TournamentStatus {
+  DRAFT
+  PUBLISHED
+  REGISTRATION_OPEN
+  REGISTRATION_CLOSED
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+}
+
+enum TournamentCategoryStatus {
+  DRAFT
+  REGISTRATION_OPEN
+  REGISTRATION_CLOSED
+  SEEDING
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+}
+
+enum CompetitionFormat {
+  SINGLE_ELIMINATION
+  GROUP_PLAYOFF
+  DOUBLE_ELIMINATION // V2
+  ROUND_ROBIN // V2
+  AMERICANO // V2
+  MEXICANO // V2
+}
+
+enum StageType {
+  GROUPS
+  SINGLE_ELIMINATION
+  DOUBLE_ELIMINATION
+}
+
+enum RegistrationStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  CANCELLED
+  WAITLISTED
+}
+
+enum MatchStatus {
+  SCHEDULED
+  IN_PROGRESS
+  COMPLETED
+  WALKOVER
+  RETIRED
+  POSTPONED
+  CANCELLED
+}
+
+enum AuditAction {
+  CREATE
+  UPDATE
+  DELETE
+  PUBLISH
+  APPROVE
+  REJECT
+  CANCEL
+  RESULT_RECORDED
+  RESULT_MODIFIED
+}
+
+enum ImportStatus {
+  PENDING
+  PROCESSING
+  COMPLETED
+  FAILED
+}
+
+enum ImportType {
+  PLAYERS
+  TEAMS
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// AUTH (Auth.js v5 / next-auth compatible)
+// ─────────────────────────────────────────────────────────────────────────────
+
+model User {
+  id            String     @id @default(cuid())
+  email         String     @unique
+  emailVerified DateTime?
+  name          String?
+  image         String?
+  password      String? // bcrypt hashed, for credentials provider
+  systemRole    SystemRole @default(PLAYER)
+  isActive      Boolean    @default(true)
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
+
+  accounts             Account[]
+  sessions             Session[]
+  playerProfile        PlayerProfile?
+  organizerMemberships UserOrganizer[]
+  auditLogs            AuditLog[]
+  passwordResetTokens  PasswordResetToken[]
+
+  @@map("users")
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String?
+  access_token      String?
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@map("accounts")
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("sessions")
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+  @@map("verification_tokens")
+}
+
+model PasswordResetToken {
+  id        String   @id @default(cuid())
+  userId    String
+  token     String   @unique
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("password_reset_tokens")
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// PLAYER PROFILE (global — un jugador puede estar en múltiples organizadores)
+// ─────────────────────────────────────────────────────────────────────────────
+
+model PlayerProfile {
+  id               String    @id @default(cuid())
+  userId           String    @unique
+  firstName        String
+  lastName         String
+  phone            String?
+  birthDate        DateTime?
+  avatarUrl        String?
+  dni              String?   @unique
+  emergencyContact String?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  user           User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  teamPlayers    TeamPlayer[]
+  rankingEntries RankingEntry[]
+
+  @@map("player_profiles")
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// MULTI-TENANT: ORGANIZERS
+// ─────────────────────────────────────────────────────────────────────────────
+
+model Organizer {
+  id          String   @id @default(cuid())
+  name        String
+  slug        String   @unique
+  description String?
+  logoUrl     String?
+  coverUrl    String?
+  email       String?
+  phone       String?
+  website     String?
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  settings      OrganizerSettings?
+  members       UserOrganizer[]
+  venues        Venue[]
+  categories    Category[]
+  tournaments   Tournament[]
+  rankingTables RankingTable[]
+  importBatches ImportBatch[]
+  auditLogs     AuditLog[]
+
+  @@map("organizers")
+}
+
+model OrganizerSettings {
+  id                      String  @id @default(cuid())
+  organizerId             String  @unique
+  defaultSetsPerMatch     Int     @default(3)
+  defaultGamesPerSet      Int     @default(6)
+  defaultMaxTeamsPerCat   Int     @default(16)
+  allowPublicRegistration Boolean @default(false)
+  requirePayment          Boolean @default(false)
+  timezone                String  @default("America/Argentina/Buenos_Aires")
+
+  organizer Organizer @relation(fields: [organizerId], references: [id], onDelete: Cascade)
+
+  @@map("organizer_settings")
+}
+
+// Membresía de un usuario en un organizador (OWNER / ORGANIZER / COLLABORATOR)
+model UserOrganizer {
+  id          String                @id @default(cuid())
+  userId      String
+  organizerId String
+  role        OrganizerRole         @default(COLLABORATOR)
+  permissions OrganizerPermission[]
+  isActive    Boolean               @default(true)
+  createdAt   DateTime              @default(now())
+  updatedAt   DateTime              @updatedAt
+
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  organizer Organizer @relation(fields: [organizerId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, organizerId])
+  @@map("user_organizers")
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// VENUES & COURTS
+// ─────────────────────────────────────────────────────────────────────────────
+
+model Venue {
+  id          String   @id @default(cuid())
+  organizerId String
+  name        String
+  address     String?
+  city        String?
+  mapUrl      String?
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  organizer     Organizer      @relation(fields: [organizerId], references: [id], onDelete: Cascade)
+  courts        Court[]
+  scheduleSlots ScheduleSlot[]
+
+  @@map("venues")
+}
+
+model Court {
+  id       String  @id @default(cuid())
+  venueId  String
+  name     String
+  surface  String? // cemento, césped sintético, cristal, etc.
+  isIndoor Boolean @default(false)
+  isActive Boolean @default(true)
+
+  venue            Venue             @relation(fields: [venueId], references: [id], onDelete: Cascade)
+  courtAssignments CourtAssignment[]
+
+  @@map("courts")
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// CATEGORIES (por organizador)
+// ─────────────────────────────────────────────────────────────────────────────
+
+model Category {
+  id          String  @id @default(cuid())
+  organizerId String
+  name        String // "Masculina 1ra", "Femenina 2da", "Mixta"
+  gender      Gender  @default(OPEN)
+  level       String? // "1ra", "2da", "3ra", etc.
+  description String?
+  isActive    Boolean @default(true)
+
+  organizer            Organizer            @relation(fields: [organizerId], references: [id], onDelete: Cascade)
+  tournamentCategories TournamentCategory[]
+  rankingEntries       RankingEntry[]
+
+  @@unique([organizerId, name])
+  @@map("categories")
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// TOURNAMENTS
+// ─────────────────────────────────────────────────────────────────────────────
+
+model Tournament {
+  id                   String           @id @default(cuid())
+  organizerId          String
+  name                 String
+  description          String?
+  status               TournamentStatus @default(DRAFT)
+  startDate            DateTime
+  endDate              DateTime
+  registrationDeadline DateTime?
+  posterUrl            String?
+  isPublic             Boolean          @default(false)
+  publishedAt          DateTime?
+  createdAt            DateTime         @default(now())
+  updatedAt            DateTime         @updatedAt
+
+  organizer     Organizer            @relation(fields: [organizerId], references: [id], onDelete: Cascade)
+  categories    TournamentCategory[]
+  scheduleSlots ScheduleSlot[]
+  auditLogs     AuditLog[]
+
+  @@map("tournaments")
+}
+
+// Categoría dentro de un torneo — tiene su propio flujo competitivo independiente
+model TournamentCategory {
+  id           String                   @id @default(cuid())
+  tournamentId String
+  categoryId   String
+  format       CompetitionFormat        @default(SINGLE_ELIMINATION)
+  status       TournamentCategoryStatus @default(DRAFT)
+  maxTeams     Int
+  minTeams     Int                      @default(4)
+  pricePerTeam Decimal?                 @db.Decimal(10, 2)
+
+  // Reglas de partido (pueden diferir de los defaults del organizador)
+  setsPerMatch  Int     @default(3)
+  gamesPerSet   Int     @default(6)
+  hasTiebreak   Boolean @default(true)
+  tiebreakAt    Int     @default(6) // se llega al tiebreak con 6-6
+  tiebreakGames Int     @default(7) // primero en llegar a 7
+
+  // Config específica del formato (e.g. { groupSize: 4, teamsAdvancePerGroup: 2 })
+  formatConfig Json?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  tournament      Tournament      @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
+  category        Category        @relation(fields: [categoryId], references: [id])
+  registrations   Registration[]
+  waitlistEntries WaitlistEntry[]
+  stages          Stage[]
+  rankingTable    RankingTable?
+
+  @@unique([tournamentId, categoryId])
+  @@map("tournament_categories")
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// TEAMS & PLAYERS
+// ─────────────────────────────────────────────────────────────────────────────
+
+model Team {
+  id        String   @id @default(cuid())
+  name      String? // nombre opcional de la pareja
+  createdAt DateTime @default(now())
+
+  players         TeamPlayer[]
+  registrations   Registration[]
+  matchTeams      MatchTeam[]
+  groupStandings  GroupStanding[]
+  bracketNodes    BracketNode[]
+  rankingEntries  RankingEntry[]
+  waitlistEntries WaitlistEntry[]
+
+  @@map("teams")
+}
+
+model TeamPlayer {
+  id              String  @id @default(cuid())
+  teamId          String
+  playerProfileId String
+  isActive        Boolean @default(true)
+
+  team          Team          @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  playerProfile PlayerProfile @relation(fields: [playerProfileId], references: [id])
+
+  @@unique([teamId, playerProfileId])
+  @@map("team_players")
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// REGISTRATIONS & WAITLIST
+// ─────────────────────────────────────────────────────────────────────────────
+
+model Registration {
+  id                   String             @id @default(cuid())
+  tournamentCategoryId String
+  teamId               String
+  status               RegistrationStatus @default(PENDING)
+  notes                String?
+  reviewedAt           DateTime?
+  reviewedByUserId     String?
+  createdAt            DateTime           @default(now())
+  updatedAt            DateTime           @updatedAt
+
+  tournamentCategory TournamentCategory @relation(fields: [tournamentCategoryId], references: [id], onDelete: Cascade)
+  team               Team               @relation(fields: [teamId], references: [id])
+
+  @@unique([tournamentCategoryId, teamId])
+  @@map("registrations")
+}
+
+model WaitlistEntry {
+  id                   String    @id @default(cuid())
+  tournamentCategoryId String
+  teamId               String
+  position             Int // orden en la lista de espera
+  notifiedAt           DateTime?
+  createdAt            DateTime  @default(now())
+
+  tournamentCategory TournamentCategory @relation(fields: [tournamentCategoryId], references: [id], onDelete: Cascade)
+  team               Team               @relation(fields: [teamId], references: [id])
+
+  @@unique([tournamentCategoryId, teamId])
+  @@map("waitlist_entries")
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// COMPETITION ENGINE
+// Motor desacoplado por formato. Cada Stage tiene su propia estructura.
+// ─────────────────────────────────────────────────────────────────────────────
+
+// Stage = fase de la competencia dentro de una categoría de torneo
+// Ejemplo: [Fase de Grupos (order=1), Eliminación Directa (order=2)]
+model Stage {
+  id                   String    @id @default(cuid())
+  tournamentCategoryId String
+  name                 String // "Fase de Grupos", "Cuartos", "Semifinal", "Final"
+  type                 StageType
+  order                Int // secuencia dentro de la tournament category
+  isCompleted          Boolean   @default(false)
+  createdAt            DateTime  @default(now())
+
+  tournamentCategory TournamentCategory @relation(fields: [tournamentCategoryId], references: [id], onDelete: Cascade)
+  groups             Group[]
+  bracketNodes       BracketNode[]
+  matches            Match[]
+
+  @@map("stages")
+}
+
+// Group: solo para stages de tipo GROUPS
+model Group {
+  id      String @id @default(cuid())
+  stageId String
+  name    String // "Grupo A", "Grupo B"
+  order   Int
+
+  stage     Stage           @relation(fields: [stageId], references: [id], onDelete: Cascade)
+  standings GroupStanding[]
+  matches   Match[]
+
+  @@map("groups")
+}
+
+model GroupStanding {
+  id            String @id @default(cuid())
+  groupId       String
+  teamId        String
+  position      Int    @default(0)
+  matchesPlayed Int    @default(0)
+  matchesWon    Int    @default(0)
+  matchesLost   Int    @default(0)
+  setsWon       Int    @default(0)
+  setsLost      Int    @default(0)
+  gamesWon      Int    @default(0)
+  gamesLost     Int    @default(0)
+  points        Int    @default(0)
+
+  group Group @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  team  Team  @relation(fields: [teamId], references: [id])
+
+  @@unique([groupId, teamId])
+  @@map("group_standings")
+}
+
+// BracketNode: slot en el cuadro de eliminación directa
+// Árbol binario: cada nodo tiene hasta 2 hijos (los dos equipos que se enfrentan)
+// El ganador avanza al nodo padre
+model BracketNode {
+  id           String  @id @default(cuid())
+  stageId      String
+  round        Int // 1 = Final, 2 = Semis, 4 = Cuartos, etc.
+  position     Int // posición dentro del round
+  teamId       String? // null = TBD (ganador de ronda anterior)
+  isWinner     Boolean @default(false)
+  isBye        Boolean @default(false)
+  parentNodeId String?
+
+  parentNode BracketNode?  @relation("BracketTree", fields: [parentNodeId], references: [id])
+  childNodes BracketNode[] @relation("BracketTree")
+  stage      Stage         @relation(fields: [stageId], references: [id], onDelete: Cascade)
+  team       Team?         @relation(fields: [teamId], references: [id])
+  match      Match?
+
+  @@map("bracket_nodes")
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// MATCHES
+// ─────────────────────────────────────────────────────────────────────────────
+
+model Match {
+  id            String      @id @default(cuid())
+  stageId       String
+  groupId       String? // solo para partidos de fase de grupos
+  bracketNodeId String?     @unique // solo para eliminación directa
+  matchNumber   Int? // número visible (ej: Partido 1, Cuarto de Final 3)
+  status        MatchStatus @default(SCHEDULED)
+  scheduledAt   DateTime?
+  startedAt     DateTime?
+  completedAt   DateTime?
+  notes         String?
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+
+  stage             Stage               @relation(fields: [stageId], references: [id], onDelete: Cascade)
+  group             Group?              @relation(fields: [groupId], references: [id])
+  bracketNode       BracketNode?        @relation(fields: [bracketNodeId], references: [id])
+  teams             MatchTeam[]
+  sets              MatchSet[]
+  result            MatchResult?
+  scheduleSlot      ScheduleSlot?
+  rescheduleHistory RescheduleHistory[]
+
+  @@map("matches")
+}
+
+model MatchTeam {
+  id      String @id @default(cuid())
+  matchId String
+  teamId  String
+  side    Int // 1 o 2
+
+  match Match @relation(fields: [matchId], references: [id], onDelete: Cascade)
+  team  Team  @relation(fields: [teamId], references: [id])
+
+  @@unique([matchId, teamId])
+  @@map("match_teams")
+}
+
+model MatchSet {
+  id        String @id @default(cuid())
+  matchId   String
+  setNumber Int
+  games1    Int // games del equipo side=1
+  games2    Int // games del equipo side=2
+  tiebreak1 Int? // puntos de tiebreak para side=1
+  tiebreak2 Int? // puntos de tiebreak para side=2
+
+  match Match @relation(fields: [matchId], references: [id], onDelete: Cascade)
+
+  @@unique([matchId, setNumber])
+  @@map("match_sets")
+}
+
+model MatchResult {
+  id            String   @id @default(cuid())
+  matchId       String   @unique
+  winnerId      String? // teamId; null en walkover sin ganador
+  isWalkover    Boolean  @default(false)
+  isRetired     Boolean  @default(false)
+  retiredTeamId String? // teamId del equipo que se retiró
+  recordedById  String // userId de quien cargó el resultado
+  recordedAt    DateTime @default(now())
+
+  match Match @relation(fields: [matchId], references: [id], onDelete: Cascade)
+
+  @@map("match_results")
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// SCHEDULE
+// ─────────────────────────────────────────────────────────────────────────────
+
+model ScheduleSlot {
+  id           String    @id @default(cuid())
+  tournamentId String
+  venueId      String
+  matchId      String?   @unique
+  date         DateTime
+  startTime    DateTime
+  endTime      DateTime?
+  notes        String?
+
+  tournament      Tournament       @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
+  venue           Venue            @relation(fields: [venueId], references: [id])
+  match           Match?           @relation(fields: [matchId], references: [id])
+  courtAssignment CourtAssignment?
+
+  @@map("schedule_slots")
+}
+
+model CourtAssignment {
+  id             String @id @default(cuid())
+  scheduleSlotId String @unique
+  courtId        String
+
+  scheduleSlot ScheduleSlot @relation(fields: [scheduleSlotId], references: [id], onDelete: Cascade)
+  court        Court        @relation(fields: [courtId], references: [id])
+
+  @@map("court_assignments")
+}
+
+model RescheduleHistory {
+  id            String    @id @default(cuid())
+  matchId       String
+  previousDate  DateTime?
+  newDate       DateTime?
+  reason        String?
+  requestedById String // userId
+  createdAt     DateTime  @default(now())
+
+  match Match @relation(fields: [matchId], references: [id], onDelete: Cascade)
+
+  @@map("reschedule_history")
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// RANKING
+// ─────────────────────────────────────────────────────────────────────────────
+
+model RankingTable {
+  id                   String   @id @default(cuid())
+  organizerId          String
+  tournamentCategoryId String?  @unique // null = ranking general de la categoría en el organizador
+  categoryId           String?
+  name                 String
+  season               String? // ej: "2024", "2024-Q1"
+  isActive             Boolean  @default(true)
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+
+  organizer          Organizer           @relation(fields: [organizerId], references: [id], onDelete: Cascade)
+  tournamentCategory TournamentCategory? @relation(fields: [tournamentCategoryId], references: [id])
+  entries            RankingEntry[]
+  rules              RankingRule[]
+
+  @@map("ranking_tables")
+}
+
+model RankingEntry {
+  id                String   @id @default(cuid())
+  rankingTableId    String
+  playerProfileId   String
+  teamId            String?
+  categoryId        String?
+  position          Int
+  points            Int      @default(0)
+  tournamentsPlayed Int      @default(0)
+  updatedAt         DateTime @updatedAt
+
+  rankingTable  RankingTable             @relation(fields: [rankingTableId], references: [id], onDelete: Cascade)
+  playerProfile PlayerProfile            @relation(fields: [playerProfileId], references: [id])
+  team          Team?                    @relation(fields: [teamId], references: [id])
+  category      Category?                @relation(fields: [categoryId], references: [id])
+  movements     RankingMovementHistory[]
+
+  @@unique([rankingTableId, playerProfileId])
+  @@map("ranking_entries")
+}
+
+model RankingRule {
+  id             String  @id @default(cuid())
+  rankingTableId String
+  placement      Int // 1er puesto, 2do, 3ro, etc.
+  points         Int // puntos otorgados
+  description    String?
+
+  rankingTable RankingTable @relation(fields: [rankingTableId], references: [id], onDelete: Cascade)
+
+  @@map("ranking_rules")
+}
+
+model RankingMovementHistory {
+  id             String   @id @default(cuid())
+  rankingEntryId String
+  previousPos    Int
+  newPos         Int
+  previousPoints Int
+  newPoints      Int
+  reason         String? // ej: "Torneo X - Campeón"
+  createdAt      DateTime @default(now())
+
+  rankingEntry RankingEntry @relation(fields: [rankingEntryId], references: [id], onDelete: Cascade)
+
+  @@map("ranking_movement_history")
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// AUDIT
+// ─────────────────────────────────────────────────────────────────────────────
+
+model AuditLog {
+  id           String      @id @default(cuid())
+  userId       String
+  organizerId  String?
+  tournamentId String?
+  entity       String // nombre de la entidad, ej: "Registration", "Match"
+  entityId     String
+  action       AuditAction
+  before       Json? // estado anterior
+  after        Json? // estado posterior
+  ipAddress    String?
+  userAgent    String?
+  createdAt    DateTime    @default(now())
+
+  user       User        @relation(fields: [userId], references: [id])
+  organizer  Organizer?  @relation(fields: [organizerId], references: [id])
+  tournament Tournament? @relation(fields: [tournamentId], references: [id])
+
+  @@map("audit_logs")
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// IMPORT
+// ─────────────────────────────────────────────────────────────────────────────
+
+model ImportBatch {
+  id          String       @id @default(cuid())
+  organizerId String
+  type        ImportType
+  status      ImportStatus @default(PENDING)
+  fileName    String
+  totalRows   Int          @default(0)
+  successRows Int          @default(0)
+  failedRows  Int          @default(0)
+  processedAt DateTime?
+  createdById String // userId
+  createdAt   DateTime     @default(now())
+
+  organizer Organizer        @relation(fields: [organizerId], references: [id], onDelete: Cascade)
+  errors    ImportRowError[]
+
+  @@map("import_batches")
+}
+
+model ImportRowError {
+  id            String @id @default(cuid())
+  importBatchId String
+  rowNumber     Int
+  rowData       Json
+  errorMessage  String
+
+  importBatch ImportBatch @relation(fields: [importBatchId], references: [id], onDelete: Cascade)
+
+  @@map("import_row_errors")
+}

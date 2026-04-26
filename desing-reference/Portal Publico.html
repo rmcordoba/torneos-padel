@@ -1,0 +1,1741 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Club Pádel Buenos Aires — Portal de Torneos</title>
+  <script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700;800&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-behavior: smooth; }
+    body { font-family: "DM Sans", sans-serif; background: #f1f5f9; color: #1e293b; -webkit-font-smoothing: antialiased; }
+    #root { min-height: 100vh; }
+    ::-webkit-scrollbar { width: 5px; height: 5px; }
+    ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
+
+    @keyframes fadeUp   { from { opacity:0; transform:translateY(14px) } to { opacity:1; transform:translateY(0) } }
+    @keyframes fadeIn   { from { opacity:0 } to { opacity:1 } }
+    @keyframes slideUp  { from { opacity:0; transform:translateY(32px) } to { opacity:1; transform:translateY(0) } }
+    @keyframes pulse    { 0%,100%{opacity:1} 50%{opacity:.4} }
+    @keyframes spin     { to { transform: rotate(360deg) } }
+
+    .fade-up  { animation: fadeUp  .28s cubic-bezier(.22,1,.36,1) forwards; }
+    .fade-in  { animation: fadeIn  .2s ease forwards; }
+    .slide-up { animation: slideUp .32s cubic-bezier(.22,1,.36,1) forwards; }
+
+    /* Cards hover */
+    .card-hover { transition: box-shadow .15s, border-color .15s, transform .15s; }
+    .card-hover:hover { box-shadow: 0 8px 28px rgba(0,0,0,0.1); border-color: #bbf7d0 !important; transform: translateY(-1px); }
+
+    /* Mobile */
+    @media (max-width: 640px) {
+      .hide-sm { display: none !important; }
+      .grid-1-sm { grid-template-columns: 1fr !important; }
+      .px-sm { padding-left: 16px !important; padding-right: 16px !important; }
+      .text-sm-sm { font-size: 13px !important; }
+      .h1-sm { font-size: 26px !important; }
+    }
+    @media (max-width: 900px) {
+      .hide-md { display: none !important; }
+      .grid-2-md { grid-template-columns: 1fr 1fr !important; }
+    }
+
+    /* Overlay */
+    .overlay-bg {
+      position: fixed; inset: 0; background: rgba(15,23,42,0.7);
+      backdrop-filter: blur(6px); z-index: 1000;
+      display: flex; align-items: center; justify-content: center;
+      padding: 16px; animation: fadeIn .2s ease;
+    }
+    .overlay-card {
+      background: #fff; border-radius: 20px;
+      box-shadow: 0 32px 80px rgba(0,0,0,0.25);
+      width: 100%; overflow: hidden;
+      animation: slideUp .28s cubic-bezier(.22,1,.36,1);
+    }
+  </style>
+</head>
+<body>
+<div id="root"></div>
+<script src="padel-data.js"></script>
+<script src="padel-data2.js"></script>
+<script type="text/babel">
+const { useState, useEffect, useRef } = React;
+
+// ─── DESIGN TOKENS ────────────────────────────────────────────────────────────
+const G  = "#16a34a";
+const GL = "#f0fdf4";
+const GB = "#dcfce7";
+const GD = "#15803d";
+const MAX = 1140;
+
+// ─── SHARED ATOMS ─────────────────────────────────────────────────────────────
+const Badge = ({ estado }) => {
+  const m = {
+    activo:        { l:"En curso",       bg:"#dcfce7", c:G,         dot:true  },
+    inscripciones: { l:"Inscripciones",  bg:"#dbeafe", c:"#2563eb", dot:false },
+    finalizado:    { l:"Finalizado",     bg:"#f1f5f9", c:"#64748b", dot:false },
+    abierta:       { l:"Abierta",        bg:"#dcfce7", c:G,         dot:false },
+    llena:         { l:"Llena",          bg:"#fee2e2", c:"#dc2626", dot:false },
+    cerrada:       { l:"Cerrada",        bg:"#f1f5f9", c:"#64748b", dot:false },
+    en_curso:      { l:"En curso",       bg:"#dcfce7", c:G,         dot:true  },
+    jugado:        { l:"Jugado",         bg:"#f1f5f9", c:"#94a3b8", dot:false },
+    programado:    { l:"Próximo",        bg:"#dbeafe", c:"#3b82f6", dot:false },
+  };
+  const s = m[estado] || { l:estado, bg:"#f1f5f9", c:"#64748b", dot:false };
+  return (
+    <span style={{ display:"inline-flex", alignItems:"center", gap:5,
+      padding:"3px 10px", borderRadius:20, fontSize:11, fontWeight:700,
+      letterSpacing:"0.04em", textTransform:"uppercase",
+      background:s.bg, color:s.c }}>
+      {s.dot && <span style={{ width:6, height:6, borderRadius:"50%", background:s.c, animation:"pulse 1.4s infinite", display:"inline-block" }} />}
+      {s.l}
+    </span>
+  );
+};
+
+const Progress = ({ value, max, h=6 }) => {
+  const pct = max > 0 ? Math.min(100, Math.round(value/max*100)) : 0;
+  return (
+    <div style={{ display:"flex", alignItems:"center", gap:8 }}>
+      <div style={{ flex:1, height:h, background:"#e2e8f0", borderRadius:h, overflow:"hidden" }}>
+        <div style={{ height:"100%", width:`${pct}%`, borderRadius:h,
+          background: pct>=100 ? "#dc2626" : pct>75 ? "#f97316" : G,
+          transition:"width .5s" }} />
+      </div>
+      <span style={{ fontSize:11, color:"#94a3b8", minWidth:40, textAlign:"right" }}>{value}/{max}</span>
+    </div>
+  );
+};
+
+const Btn = ({ children, variant="primary", onClick, size="md", style={} }) => {
+  const base = {
+    display:"inline-flex", alignItems:"center", gap:6,
+    padding: size==="sm" ? "7px 14px" : "10px 22px",
+    borderRadius:10, fontFamily:"inherit",
+    fontSize: size==="sm" ? 12 : 13, fontWeight:700,
+    cursor:"pointer", border:"none", transition:"all .15s", ...style
+  };
+  const v = {
+    primary: { background:G, color:"#fff", boxShadow:"0 2px 8px rgba(22,163,74,.25)" },
+    ghost:   { background:"transparent", color:"#475569", border:"1px solid #e2e8f0" },
+    outline: { background:"transparent", color:G, border:`1.5px solid ${G}` },
+    dark:    { background:"rgba(255,255,255,0.12)", color:"#fff", border:"1px solid rgba(255,255,255,0.2)" },
+  };
+  return <button style={{...base,...v[variant]}} onClick={onClick}>{children}</button>;
+};
+
+const Avatar = ({ initials, size=36, color=G }) => (
+  <div style={{ width:size, height:size, borderRadius:size*.28, flexShrink:0,
+    background:`${color}18`, border:`1.5px solid ${color}35`,
+    display:"flex", alignItems:"center", justifyContent:"center",
+    fontSize:size*.34, fontWeight:800, color, fontFamily:"Space Grotesk, sans-serif" }}>
+    {initials}
+  </div>
+);
+
+// ─── AUTH FIELD (defined outside AuthModal to avoid remount on each keystroke) ─
+const AField = ({ label, value, onChange, type="text", placeholder, required }) => (
+  <div style={{ marginBottom:14 }}>
+    <label style={{ display:"block", fontSize:11, fontWeight:700, color:"#64748b",
+      textTransform:"uppercase", letterSpacing:"0.07em", marginBottom:5 }}>
+      {label}{required && <span style={{ color:"#dc2626" }}> *</span>}
+    </label>
+    <input type={type} value={value} onChange={e=>onChange(e.target.value)}
+      placeholder={placeholder}
+      style={{ width:"100%", padding:"10px 14px", borderRadius:9,
+        border:"1px solid #e2e8f0", fontFamily:"inherit", fontSize:13,
+        outline:"none", color:"#1e293b", background:"#f8fafc",
+        transition:"border-color .15s" }}
+      onFocus={e=>e.target.style.borderColor=G}
+      onBlur={e=>e.target.style.borderColor="#e2e8f0"}
+    />
+  </div>
+);
+
+// ─── AUTH MODAL ───────────────────────────────────────────────────────────────
+const AuthModal = ({ onClose, onLogin, defaultTab="login" }) => {
+  const [authTab, setAuthTab] = useState(defaultTab);
+  const [loginForm, setLoginForm] = useState({ email:"", password:"" });
+  const [regForm, setRegForm]   = useState({ nombre:"", email:"", telefono:"", password:"", confirm:"" });
+  const [error, setError]   = useState("");
+  const [loading, setLoading] = useState(false);
+  const [regOk, setRegOk]   = useState(false);
+
+  const setLF = k => v => setLoginForm(f=>({...f,[k]:v}));
+  const setRF = k => v => setRegForm(f=>({...f,[k]:v}));
+
+  const handleLogin = () => {
+    setError("");
+    if (!loginForm.email || !loginForm.password) { setError("Completá todos los campos."); return; }
+    setLoading(true);
+    setTimeout(() => {
+      setLoading(false);
+      // Admin credentials
+      if (loginForm.email === "admin@padelclub.com.ar" && loginForm.password === "admin123") {
+        onLogin({ nombre:"Administrador", email:loginForm.email, role:"admin", avatar:"AD" });
+        onClose();
+        return;
+      }
+      // Check mock players
+      const player = PLAYERS_DATA.find(p => p.email && p.email.toLowerCase() === loginForm.email.toLowerCase());
+      if (player && loginForm.password.length >= 4) {
+        onLogin({ nombre:player.nombre, email:loginForm.email, role:"jugador", avatar:player.avatar, playerId:player.id });
+        onClose();
+        return;
+      }
+      // Generic user
+      if (loginForm.email.includes("@") && loginForm.password.length >= 4) {
+        const initials = loginForm.email.substring(0,2).toUpperCase();
+        onLogin({ nombre:loginForm.email.split("@")[0], email:loginForm.email, role:"jugador", avatar:initials });
+        onClose();
+        return;
+      }
+      setError("Email o contraseña incorrectos.");
+    }, 700);
+  };
+
+  const handleRegister = () => {
+    setError("");
+    if (!regForm.nombre || !regForm.email || !regForm.password) { setError("Completá los campos requeridos."); return; }
+    if (regForm.password !== regForm.confirm) { setError("Las contraseñas no coinciden."); return; }
+    if (regForm.password.length < 6) { setError("La contraseña debe tener al menos 6 caracteres."); return; }
+    setLoading(true);
+    setTimeout(() => {
+      setLoading(false);
+      setRegOk(true);
+    }, 800);
+  };
+
+  return (
+    <div className="overlay-bg" onClick={e=>e.target===e.currentTarget&&onClose()}>
+      <div className="overlay-card" style={{ maxWidth:420 }}>
+        {/* Header */}
+        <div style={{ padding:"22px 24px 0",
+          display:"flex", alignItems:"flex-start", justifyContent:"space-between" }}>
+          <div>
+            <div style={{ display:"flex", alignItems:"center", gap:10, marginBottom:16 }}>
+              <div style={{ width:34, height:34, borderRadius:9, background:GL,
+                border:`2px solid ${GB}`, display:"flex", alignItems:"center",
+                justifyContent:"center", fontSize:16 }}>🎾</div>
+              <div style={{ fontSize:15, fontWeight:800, color:"#0f172a",
+                fontFamily:"Space Grotesk, sans-serif" }}>Club Pádel BA</div>
+            </div>
+            {/* Tabs */}
+            <div style={{ display:"flex", gap:0, borderBottom:"2px solid #f1f5f9" }}>
+              {[{id:"login",label:"Iniciar sesión"},{id:"register",label:"Registrarse"}].map(t=>(
+                <button key={t.id} onClick={()=>{setAuthTab(t.id);setError("");}}
+                  style={{ padding:"8px 18px", background:"none", border:"none",
+                    borderBottom:`2px solid ${authTab===t.id?G:"transparent"}`,
+                    color:authTab===t.id?G:"#94a3b8", fontFamily:"inherit",
+                    fontSize:13, fontWeight:700, cursor:"pointer", marginBottom:-2,
+                    transition:"color .12s" }}>
+                  {t.label}
+                </button>
+              ))}
+            </div>
+          </div>
+          <button onClick={onClose} style={{ background:"#f1f5f9", border:"none",
+            color:"#64748b", width:30, height:30, borderRadius:8,
+            cursor:"pointer", fontSize:13, flexShrink:0, marginTop:4 }}>✕</button>
+        </div>
+
+        <div style={{ padding:"20px 24px 24px" }}>
+          {authTab === "login" ? (
+            <div className="fade-in">
+              <AField label="Email" value={loginForm.email} onChange={setLF("email")}
+                type="email" placeholder="tu@email.com" required />
+              <AField label="Contraseña" value={loginForm.password} onChange={setLF("password")}
+                type="password" placeholder="••••••••" required />
+              {error && <div style={{ fontSize:12, color:"#dc2626",
+                background:"#fee2e2", padding:"8px 12px", borderRadius:8,
+                marginBottom:14 }}>{error}</div>}
+              <button onClick={handleLogin} disabled={loading}
+                style={{ width:"100%", padding:"11px", borderRadius:10,
+                  background:loading?"#86efac":G, color:"#fff", border:"none",
+                  fontFamily:"inherit", fontSize:14, fontWeight:700,
+                  cursor:loading?"not-allowed":"pointer",
+                  boxShadow:"0 2px 10px rgba(22,163,74,.25)",
+                  transition:"all .15s" }}>
+                {loading ? "Ingresando…" : "Ingresar →"}
+              </button>
+              <div style={{ marginTop:14, padding:"12px 14px", background:"#f8fafc",
+                borderRadius:10, border:"1px solid #e2e8f0", fontSize:11, color:"#94a3b8" }}>
+                <div style={{ fontWeight:700, color:"#64748b", marginBottom:5 }}>Demo de acceso</div>
+                <div>Admin: <code style={{color:"#334155"}}>admin@padelclub.com.ar</code> / <code style={{color:"#334155"}}>admin123</code></div>
+                <div style={{marginTop:2}}>Jugador: cualquier email válido con contraseña ≥ 4 chars</div>
+              </div>
+              <div style={{ textAlign:"center", marginTop:14 }}>
+                <span style={{ fontSize:12, color:"#94a3b8" }}>¿No tenés cuenta? </span>
+                <button onClick={()=>setAuthTab("register")}
+                  style={{ fontSize:12, color:G, fontWeight:700, background:"none",
+                    border:"none", cursor:"pointer", fontFamily:"inherit" }}>
+                  Registrate gratis
+                </button>
+              </div>
+            </div>
+          ) : regOk ? (
+            <div style={{ textAlign:"center", padding:"8px 0 4px" }} className="fade-in">
+              <div style={{ fontSize:52, marginBottom:14 }}>🎾</div>
+              <h3 style={{ fontSize:17, fontWeight:800, color:"#0f172a",
+                fontFamily:"Space Grotesk, sans-serif", marginBottom:8 }}>
+                ¡Registro exitoso!
+              </h3>
+              <p style={{ fontSize:13, color:"#64748b", lineHeight:1.6, marginBottom:20 }}>
+                Tu cuenta fue creada. Ya podés iniciar sesión con tu email y contraseña.
+              </p>
+              <button onClick={()=>{setRegOk(false);setAuthTab("login");setLoginForm({email:regForm.email,password:""});}}
+                style={{ padding:"10px 28px", borderRadius:10, background:G,
+                  color:"#fff", border:"none", fontFamily:"inherit",
+                  fontSize:13, fontWeight:700, cursor:"pointer" }}>
+                Ir al login →
+              </button>
+            </div>
+          ) : (
+            <div className="fade-in">
+              <AField label="Nombre completo" value={regForm.nombre} onChange={setRF("nombre")}
+                placeholder="Ej: Martín García" required />
+              <AField label="Email" value={regForm.email} onChange={setRF("email")}
+                type="email" placeholder="tu@email.com" required />
+              <AField label="Teléfono" value={regForm.telefono} onChange={setRF("telefono")}
+                placeholder="+54 9 11 1234-5678" />
+              <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:10 }}>
+                <AField label="Contraseña" value={regForm.password} onChange={setRF("password")}
+                  type="password" placeholder="Mín. 6 chars" required />
+                <AField label="Repetir" value={regForm.confirm} onChange={setRF("confirm")}
+                  type="password" placeholder="Repetir" required />
+              </div>
+              {error && <div style={{ fontSize:12, color:"#dc2626",
+                background:"#fee2e2", padding:"8px 12px", borderRadius:8,
+                marginBottom:14 }}>{error}</div>}
+              <button onClick={handleRegister} disabled={loading}
+                style={{ width:"100%", padding:"11px", borderRadius:10,
+                  background:loading?"#86efac":G, color:"#fff", border:"none",
+                  fontFamily:"inherit", fontSize:14, fontWeight:700,
+                  cursor:loading?"not-allowed":"pointer",
+                  boxShadow:"0 2px 10px rgba(22,163,74,.25)" }}>
+                {loading ? "Registrando…" : "Crear cuenta →"}
+              </button>
+              <div style={{ textAlign:"center", marginTop:14 }}>
+                <span style={{ fontSize:12, color:"#94a3b8" }}>¿Ya tenés cuenta? </span>
+                <button onClick={()=>setAuthTab("login")}
+                  style={{ fontSize:12, color:G, fontWeight:700, background:"none",
+                    border:"none", cursor:"pointer", fontFamily:"inherit" }}>
+                  Iniciá sesión
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// ─── USER MENU ────────────────────────────────────────────────────────────────
+const UserMenu = ({ user, onLogout, onAdmin }) => {
+  const [open, setOpen] = useState(false);
+  const ref = useRef(null);
+  useEffect(() => {
+    const handler = e => { if (ref.current && !ref.current.contains(e.target)) setOpen(false); };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, []);
+  return (
+    <div ref={ref} style={{ position:"relative" }}>
+      <button onClick={()=>setOpen(o=>!o)}
+        style={{ display:"flex", alignItems:"center", gap:8,
+          padding:"6px 12px 6px 6px", borderRadius:10,
+          background:open?"#f0fdf4":"#f8fafc",
+          border:`1.5px solid ${open?GB:"#e2e8f0"}`,
+          cursor:"pointer", transition:"all .15s" }}>
+        <div style={{ width:28, height:28, borderRadius:8,
+          background:`${G}18`, border:`1.5px solid ${G}35`,
+          display:"flex", alignItems:"center", justifyContent:"center",
+          fontSize:12, fontWeight:800, color:G,
+          fontFamily:"Space Grotesk, sans-serif" }}>
+          {user.avatar}
+        </div>
+        <span style={{ fontSize:12, fontWeight:600, color:"#334155",
+          maxWidth:100, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}
+          className="hide-sm">
+          {user.nombre.split(" ")[0]}
+        </span>
+        <span style={{ fontSize:9, color:"#94a3b8" }}>▼</span>
+      </button>
+      {open && (
+        <div style={{ position:"absolute", right:0, top:"calc(100% + 6px)",
+          background:"#fff", borderRadius:12, border:"1px solid #e2e8f0",
+          boxShadow:"0 8px 28px rgba(0,0,0,0.12)", minWidth:200,
+          zIndex:300, overflow:"hidden" }} className="fade-in">
+          <div style={{ padding:"14px 16px", borderBottom:"1px solid #f1f5f9" }}>
+            <div style={{ fontSize:13, fontWeight:700, color:"#0f172a" }}>{user.nombre}</div>
+            <div style={{ fontSize:11, color:"#94a3b8", marginTop:2 }}>{user.email}</div>
+            {user.role==="admin" && (
+              <span style={{ marginTop:6, display:"inline-block", padding:"2px 8px",
+                borderRadius:20, fontSize:10, fontWeight:700,
+                background:"#fef9c3", color:"#a16207" }}>Administrador</span>
+            )}
+          </div>
+          {user.role==="admin" && (
+            <button onClick={()=>{setOpen(false);onAdmin();}}
+              style={{ width:"100%", padding:"10px 16px", background:"none",
+                border:"none", textAlign:"left", fontFamily:"inherit",
+                fontSize:13, fontWeight:600, color:G, cursor:"pointer",
+                borderBottom:"1px solid #f1f5f9",
+                transition:"background .12s" }}
+              onMouseEnter={e=>e.target.style.background="#f0fdf4"}
+              onMouseLeave={e=>e.target.style.background="none"}>
+              Panel de admin →
+            </button>
+          )}
+          <button onClick={()=>{setOpen(false);onLogout();}}
+            style={{ width:"100%", padding:"10px 16px", background:"none",
+              border:"none", textAlign:"left", fontFamily:"inherit",
+              fontSize:13, color:"#dc2626", cursor:"pointer",
+              transition:"background .12s" }}
+            onMouseEnter={e=>e.target.style.background="#fff5f5"}
+            onMouseLeave={e=>e.target.style.background="none"}>
+            Cerrar sesión
+          </button>
+        </div>
+      )}
+    </div>
+  );
+};
+
+// ─── HEADER ───────────────────────────────────────────────────────────────────
+const NAV = [
+  { id:"torneos",    label:"Torneos"   },
+  { id:"cuadros",    label:"Cuadros"   },
+  { id:"agenda",     label:"Agenda"    },
+  { id:"ranking",    label:"Ranking"   },
+  { id:"jugadores",  label:"Jugadores" },
+];
+
+const Header = ({ tab, setTab, onSearch, currentUser, onOpenAuth, onLogout }) => {
+  const [q, setQ] = useState("");
+  const handleSearch = (e) => {
+    setQ(e.target.value);
+    onSearch(e.target.value);
+  };
+  return (
+    <header style={{ background:"#fff", borderBottom:"1px solid #e2e8f0",
+      position:"sticky", top:0, zIndex:200,
+      boxShadow:"0 1px 4px rgba(0,0,0,0.06)" }}>
+      <div style={{ maxWidth:MAX, margin:"0 auto", padding:"0 24px" }}>
+        <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", padding:"13px 0 11px" }}>
+          {/* Logo */}
+          <div style={{ display:"flex", alignItems:"center", gap:10 }}>
+            <div style={{ width:36, height:36, borderRadius:10, background:GL,
+              border:`2px solid ${GB}`, display:"flex", alignItems:"center",
+              justifyContent:"center", fontSize:18 }}>🎾</div>
+            <div>
+              <div style={{ fontSize:15, fontWeight:800, color:"#0f172a",
+                fontFamily:"Space Grotesk, sans-serif", lineHeight:1.1 }}>
+                Club Pádel BA
+              </div>
+              <div style={{ fontSize:10, color:"#94a3b8", fontWeight:500 }}>Portal público · Temporada 2026</div>
+            </div>
+          </div>
+
+          {/* Search + CTA */}
+          <div style={{ display:"flex", gap:8, alignItems:"center" }}>
+            <div style={{ position:"relative" }} className="hide-sm">
+              <input value={q} onChange={handleSearch}
+                placeholder="Buscar jugador o torneo…"
+                style={{ padding:"8px 14px 8px 36px", borderRadius:9,
+                  border:"1px solid #e2e8f0", fontSize:13, outline:"none",
+                  background:"#f8fafc", fontFamily:"inherit", width:220,
+                  color:"#334155", transition:"border-color .15s" }}
+                onFocus={e=>e.target.style.borderColor=G}
+                onBlur={e=>e.target.style.borderColor="#e2e8f0"}
+              />
+              <span style={{ position:"absolute", left:11, top:"50%",
+                transform:"translateY(-50%)", color:"#cbd5e1", fontSize:14 }}>🔍</span>
+            </div>
+
+            {currentUser ? (
+              <UserMenu
+                user={currentUser}
+                onLogout={onLogout}
+                onAdmin={()=>{ window.location.href="Padel Tournament.html"; }}
+              />
+            ) : (
+              <div style={{ display:"flex", gap:6 }}>
+                <button onClick={()=>onOpenAuth("login")}
+                  style={{ padding:"8px 14px", borderRadius:9,
+                    background:"transparent", color:"#475569",
+                    border:"1px solid #e2e8f0", fontFamily:"inherit",
+                    fontSize:12, fontWeight:700, cursor:"pointer",
+                    transition:"all .15s" }}
+                  onMouseEnter={e=>{e.target.style.borderColor=G;e.target.style.color=G;}}
+                  onMouseLeave={e=>{e.target.style.borderColor="#e2e8f0";e.target.style.color="#475569";}}>
+                  Iniciar sesión
+                </button>
+                <button onClick={()=>onOpenAuth("register")}
+                  style={{ padding:"8px 16px", borderRadius:9, background:G,
+                    color:"#fff", border:"none", fontFamily:"inherit",
+                    fontSize:12, fontWeight:700, cursor:"pointer",
+                    boxShadow:"0 2px 8px rgba(22,163,74,.2)",
+                    transition:"all .15s" }}>
+                  Registrarse
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Tab nav */}
+        <div style={{ display:"flex", gap:0, borderTop:"1px solid #f1f5f9", overflowX:"auto" }}
+          className="scrollbar-hidden">
+          {NAV.map(t => (
+            <button key={t.id} onClick={()=>setTab(t.id)} style={{
+              padding:"11px 18px", background:"none", border:"none",
+              borderBottom: tab===t.id ? `2px solid ${G}` : "2px solid transparent",
+              color: tab===t.id ? G : "#64748b",
+              fontFamily:"inherit", fontSize:13, fontWeight:600,
+              cursor:"pointer", marginBottom:-1, whiteSpace:"nowrap",
+              transition:"color .12s",
+            }}>
+              {t.label}
+              {t.id==="agenda" && <span style={{ marginLeft:5, padding:"1px 6px",
+                borderRadius:20, fontSize:9, fontWeight:800,
+                background: tab===t.id ? "#dcfce7" : "#f1f5f9",
+                color: tab===t.id ? G : "#94a3b8" }}>HOY</span>}
+            </button>
+          ))}
+        </div>
+      </div>
+    </header>
+  );
+};
+
+// ─── LIVE TICKER ──────────────────────────────────────────────────────────────
+const LiveTicker = () => {
+  const livematches = MOCK_DATA.agenda.filter(a => a.estado === "en_curso");
+  if (!livematches.length) return null;
+  return (
+    <div style={{ background:"#0f172a", padding:"9px 0", overflow:"hidden" }}>
+      <div style={{ maxWidth:MAX, margin:"0 auto", padding:"0 24px",
+        display:"flex", alignItems:"center", gap:16 }}>
+        <span style={{ display:"flex", alignItems:"center", gap:6, flexShrink:0,
+          fontSize:10, fontWeight:800, color:"#a3e635",
+          textTransform:"uppercase", letterSpacing:"0.1em" }}>
+          <span style={{ width:6, height:6, borderRadius:"50%", background:"#a3e635",
+            animation:"pulse 1.2s infinite", display:"inline-block" }} />
+          En vivo
+        </span>
+        <div style={{ display:"flex", gap:20, overflowX:"auto" }}>
+          {livematches.map(m => (
+            <span key={m.id} style={{ fontSize:12, color:"#94a3b8",
+              whiteSpace:"nowrap", flexShrink:0 }}>
+              <span style={{ color:"#f1f5f9", fontWeight:600 }}>{m.partido}</span>
+              <span style={{ color:"#475569" }}> · {m.cancha} · {m.hora}</span>
+            </span>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// ─── TORNEOS TAB ──────────────────────────────────────────────────────────────
+const TorneosTab = ({ onSelectTorneo }) => {
+  const activo = MOCK_DATA.torneos.find(t=>t.estado==="activo");
+  const otros  = MOCK_DATA.torneos.filter(t=>t.estado!=="activo");
+
+  return (
+    <div>
+      {/* Hero */}
+      {activo && (
+        <div style={{ background:"linear-gradient(135deg,#0f172a 0%,#1a2744 55%,#14532d 100%)",
+          padding:"56px 0 44px", position:"relative", overflow:"hidden" }}>
+          {/* Background texture */}
+          <div style={{ position:"absolute", inset:0, backgroundImage:"radial-gradient(circle at 80% 50%, rgba(163,230,53,.06) 0%, transparent 60%)", pointerEvents:"none" }} />
+          <div style={{ position:"absolute", right:0, top:0, width:400, height:"100%",
+            background:"url(\"data:image/svg+xml,%3Csvg width='400' height='300' viewBox='0 0 400 300' xmlns='http://www.w3.org/2000/svg'%3E%3Ccircle cx='300' cy='150' r='200' fill='none' stroke='rgba(163,230,53,0.04)' stroke-width='60'/%3E%3Ccircle cx='350' cy='100' r='140' fill='none' stroke='rgba(163,230,53,0.03)' stroke-width='40'/%3E%3C/svg%3E\")",
+            pointerEvents:"none" }} />
+
+          <div style={{ maxWidth:MAX, margin:"0 auto", padding:"0 24px", position:"relative" }} className="px-sm">
+            <div style={{ display:"flex", gap:10, alignItems:"center", marginBottom:14 }}>
+              <Badge estado="activo" />
+              <span style={{ fontSize:12, color:"#64748b" }}>
+                {activo.fechaInicio} → {activo.fechaFin}
+              </span>
+            </div>
+            <h1 style={{ fontSize:44, fontWeight:800, color:"#f8fafc",
+              fontFamily:"Space Grotesk, sans-serif", lineHeight:1.05,
+              marginBottom:10, textWrap:"balance" }} className="h1-sm">
+              {activo.nombre}
+            </h1>
+            <p style={{ color:"#94a3b8", fontSize:15, marginBottom:32 }}>
+              📍 {activo.sede} &nbsp;·&nbsp; {activo.formato}
+            </p>
+
+            {/* Category cards */}
+            <div style={{ display:"grid", gridTemplateColumns:"repeat(4,1fr)",
+              gap:10, marginBottom:32 }} className="grid-2-md">
+              {activo.categorias.map(c => (
+                <div key={c.id} style={{ background:"rgba(255,255,255,0.06)",
+                  backdropFilter:"blur(6px)",
+                  border:"1px solid rgba(255,255,255,0.09)",
+                  borderRadius:12, padding:"14px 16px" }}>
+                  <div style={{ fontSize:12, color:"#94a3b8", marginBottom:6,
+                    fontWeight:500 }}>{c.nombre}</div>
+                  <Progress value={c.inscriptos} max={c.cupo} h={5} />
+                  <div style={{ display:"flex", justifyContent:"space-between",
+                    alignItems:"center", marginTop:8 }}>
+                    <Badge estado={c.estado} />
+                    <span style={{ fontSize:11, color:"#475569" }}>
+                      {c.cupo-c.inscriptos > 0 ? `${c.cupo-c.inscriptos} libre${c.cupo-c.inscriptos!==1?"s":""}` : "Sin cupo"}
+                    </span>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <div style={{ display:"flex", gap:10 }}>
+              <Btn variant="primary" onClick={()=>onSelectTorneo(activo)}>
+                Ver torneo →
+              </Btn>
+              <Btn variant="dark">
+                ✍ Pre-inscribirse
+              </Btn>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Other tournaments */}
+      <div style={{ maxWidth:MAX, margin:"0 auto", padding:"36px 24px 56px" }} className="px-sm">
+        {otros.length > 0 && (
+          <>
+            <h2 style={{ fontSize:17, fontWeight:700, color:"#0f172a",
+              fontFamily:"Space Grotesk, sans-serif", marginBottom:16 }}>
+              Otros torneos
+            </h2>
+            <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill,minmax(310px,1fr))",
+              gap:14 }} className="grid-1-sm">
+              {otros.map(t => (
+                <TorneoCard key={t.id} torneo={t} onClick={()=>onSelectTorneo(t)} />
+              ))}
+            </div>
+          </>
+        )}
+      </div>
+    </div>
+  );
+};
+
+const TorneoCard = ({ torneo:t, onClick }) => (
+  <div onClick={onClick} className="card-hover"
+    style={{ background:"#fff", borderRadius:14,
+      border:"1px solid #e2e8f0", overflow:"hidden", cursor:"pointer",
+      boxShadow:"0 1px 3px rgba(0,0,0,0.05)" }}>
+    <div style={{ height:5, background: t.estado==="activo" ? G : t.estado==="inscripciones" ? "#3b82f6" : "#e2e8f0" }} />
+    <div style={{ padding:"18px 20px" }}>
+      <div style={{ display:"flex", justifyContent:"space-between",
+        alignItems:"flex-start", marginBottom:8 }}>
+        <h3 style={{ fontSize:15, fontWeight:700, color:"#0f172a",
+          fontFamily:"Space Grotesk, sans-serif", lineHeight:1.3,
+          flex:1, paddingRight:8 }}>{t.nombre}</h3>
+        <Badge estado={t.estado} />
+      </div>
+      <div style={{ fontSize:12, color:"#94a3b8", marginBottom:10 }}>
+        📍 {t.sede} &nbsp;·&nbsp; {t.formato}
+      </div>
+      <div style={{ fontSize:12, color:"#64748b", marginBottom:14 }}>
+        📅 {t.fechaInicio} → {t.fechaFin}
+      </div>
+      <div style={{ display:"flex", flexWrap:"wrap", gap:5 }}>
+        {t.categorias.map(c => (
+          <span key={c.id} style={{ padding:"3px 9px", borderRadius:20,
+            fontSize:11, background:"#f8fafc", color:"#475569",
+            border:"1px solid #e2e8f0" }}>{c.nombre}</span>
+        ))}
+      </div>
+    </div>
+  </div>
+);
+
+// ─── TORNEO DETALLE ───────────────────────────────────────────────────────────
+const TorneoDetalle = ({ torneo, onBack, onInscribirse }) => {
+  const [tab, setTab] = useState("info");
+  const TABS = [
+    { id:"info",    label:"Información" },
+    { id:"cuadros", label:"Cuadros"    },
+    { id:"grupos",  label:"Grupos"     },
+    { id:"agenda",  label:"Agenda"     },
+  ];
+  return (
+    <div>
+      <div style={{ background:"linear-gradient(135deg,#0f172a,#1a2744 65%,#14532d)",
+        padding:"36px 0 0" }}>
+        <div style={{ maxWidth:MAX, margin:"0 auto", padding:"0 24px" }} className="px-sm">
+          <button onClick={onBack} style={{ background:"none", border:"none",
+            color:"#64748b", cursor:"pointer", fontSize:13, marginBottom:14,
+            fontFamily:"inherit", display:"flex", alignItems:"center", gap:5 }}>
+            ← Volver a torneos
+          </button>
+          <div style={{ display:"flex", gap:10, alignItems:"center", marginBottom:10 }}>
+            <Badge estado={torneo.estado} />
+            <span style={{ fontSize:12, color:"#475569" }}>
+              {torneo.fechaInicio} → {torneo.fechaFin}
+            </span>
+          </div>
+          <div style={{ display:"flex", alignItems:"flex-end",
+            justifyContent:"space-between", marginBottom:20, flexWrap:"wrap", gap:14 }}>
+            <div>
+              <h1 style={{ fontSize:30, fontWeight:800, color:"#f8fafc",
+                fontFamily:"Space Grotesk, sans-serif", marginBottom:5 }}
+                className="h1-sm">{torneo.nombre}</h1>
+              <p style={{ color:"#94a3b8", fontSize:13 }}>
+                📍 {torneo.sede} &nbsp;·&nbsp; {torneo.formato}
+              </p>
+            </div>
+            {torneo.estado !== "finalizado" && (
+              <Btn variant="primary" onClick={()=>onInscribirse(torneo)}>
+                ✍ Pre-inscribirse
+              </Btn>
+            )}
+          </div>
+          <div style={{ display:"flex", borderTop:"1px solid rgba(255,255,255,0.08)" }}>
+            {TABS.map(t => (
+              <button key={t.id} onClick={()=>setTab(t.id)} style={{
+                padding:"11px 18px", background:"none", border:"none",
+                borderBottom: tab===t.id ? `2px solid #a3e635` : "2px solid transparent",
+                color: tab===t.id ? "#a3e635" : "#64748b",
+                fontFamily:"inherit", fontSize:13, fontWeight:600,
+                cursor:"pointer", marginBottom:-1, whiteSpace:"nowrap" }}>
+                {t.label}
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      <div style={{ maxWidth:MAX, margin:"0 auto", padding:"28px 24px 56px" }} className="px-sm">
+        {tab==="info"    && <DetalleInfo torneo={torneo} onInscribirse={()=>onInscribirse(torneo)} />}
+        {tab==="cuadros" && <BracketView />}
+        {tab==="grupos"  && <GruposView />}
+        {tab==="agenda"  && <AgendaContent />}
+      </div>
+    </div>
+  );
+};
+
+const DetalleInfo = ({ torneo, onInscribirse }) => (
+  <div style={{ display:"grid", gridTemplateColumns:"1fr 320px", gap:20 }} className="grid-1-sm">
+    <div>
+      <h3 style={{ fontSize:15, fontWeight:700, color:"#0f172a",
+        fontFamily:"Space Grotesk, sans-serif", marginBottom:14 }}>
+        Categorías
+      </h3>
+      <div style={{ display:"grid", gridTemplateColumns:"repeat(2,1fr)", gap:10 }} className="grid-1-sm">
+        {torneo.categorias.map(c => (
+          <div key={c.id} style={{ background:"#fff", borderRadius:12,
+            border:"1px solid #e2e8f0", padding:"16px 18px",
+            boxShadow:"0 1px 3px rgba(0,0,0,0.04)" }}>
+            <div style={{ display:"flex", justifyContent:"space-between",
+              alignItems:"center", marginBottom:10 }}>
+              <span style={{ fontSize:14, fontWeight:700, color:"#0f172a",
+                fontFamily:"Space Grotesk, sans-serif" }}>{c.nombre}</span>
+              <Badge estado={c.estado} />
+            </div>
+            <Progress value={c.inscriptos} max={c.cupo} />
+            <div style={{ display:"flex", justifyContent:"space-between",
+              alignItems:"center", marginTop:10 }}>
+              <span style={{ fontSize:12, color:"#94a3b8" }}>{c.cupo} parejas · cupo</span>
+              {c.estado !== "llena" && c.estado !== "cerrada" ? (
+                <button onClick={onInscribirse} style={{ fontSize:11, fontWeight:700, color:G,
+                  background:GL, border:"none", borderRadius:6,
+                  padding:"4px 10px", cursor:"pointer", fontFamily:"inherit" }}>
+                  Inscribirse →
+                </button>
+              ) : (
+                <span style={{ fontSize:11, color:c.estado==="llena" ? "#dc2626" : "#94a3b8" }}>
+                  {c.estado==="llena" ? "Sin cupo" : "Cerrada"}
+                </span>
+              )}
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+
+    {/* Sidebar */}
+    <div style={{ display:"flex", flexDirection:"column", gap:12 }}>
+      {/* Info card */}
+      <div style={{ background:"#fff", borderRadius:14, border:"1px solid #e2e8f0",
+        padding:"18px 20px", boxShadow:"0 1px 3px rgba(0,0,0,0.04)" }}>
+        <div style={{ fontSize:12, fontWeight:700, color:"#94a3b8",
+          textTransform:"uppercase", letterSpacing:"0.07em", marginBottom:14 }}>
+          Información
+        </div>
+        {[
+          { icon:"📅", label:"Inicio",  value:torneo.fechaInicio   },
+          { icon:"🏁", label:"Cierre",  value:torneo.fechaFin      },
+          { icon:"📍", label:"Sede",    value:torneo.sede          },
+          { icon:"🎯", label:"Formato", value:torneo.formato       },
+          { icon:"🏷",  label:"Cats.",  value:`${torneo.categorias.length} categorías` },
+        ].map(f => (
+          <div key={f.label} style={{ display:"flex", gap:10, marginBottom:10,
+            alignItems:"flex-start" }}>
+            <span style={{ fontSize:14, width:20, flexShrink:0 }}>{f.icon}</span>
+            <div>
+              <div style={{ fontSize:10, color:"#94a3b8", textTransform:"uppercase",
+                letterSpacing:"0.07em", marginBottom:1 }}>{f.label}</div>
+              <div style={{ fontSize:13, fontWeight:500, color:"#1e293b" }}>{f.value}</div>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* CTA */}
+      {torneo.estado !== "finalizado" && (
+        <div style={{ background:"linear-gradient(135deg,#f0fdf4,#dcfce7)",
+          borderRadius:14, border:"1px solid #bbf7d0",
+          padding:"18px 20px" }}>
+          <div style={{ fontSize:15, fontWeight:700, color:"#0f172a",
+            fontFamily:"Space Grotesk, sans-serif", marginBottom:6 }}>
+            ¿Querés participar?
+          </div>
+          <p style={{ fontSize:12, color:"#4b7a5c", marginBottom:14, lineHeight:1.5 }}>
+            Mandá tu solicitud de inscripción. El organizador la confirma en 24–48hs.
+          </p>
+          <Btn variant="primary" onClick={onInscribirse} style={{ width:"100%", justifyContent:"center" }}>
+            ✍ Pre-inscribirse
+          </Btn>
+        </div>
+      )}
+
+      {/* Resultados finales si está finalizado */}
+      {torneo.estado === "finalizado" && (
+        <div style={{ background:"#fff", borderRadius:14, border:"1px solid #e2e8f0",
+          padding:"18px 20px" }}>
+          <div style={{ fontSize:12, fontWeight:700, color:"#94a3b8",
+            textTransform:"uppercase", letterSpacing:"0.07em", marginBottom:12 }}>
+            Campeones
+          </div>
+          {REPORTS_DATA.campeones.filter(c=>c.torneo.includes("Marzo")).slice(0,2).map((c,i)=>(
+            <div key={i} style={{ display:"flex", gap:10, marginBottom:10,
+              alignItems:"flex-start" }}>
+              <span style={{ fontSize:18 }}>{["🥇","🥈"][i]}</span>
+              <div>
+                <div style={{ fontSize:11, color:"#94a3b8" }}>{c.categoria}</div>
+                <div style={{ fontSize:13, fontWeight:700, color:i===0 ? "#15803d" : "#334155" }}>
+                  {i===0 ? c.campeon : c.subcampeon}
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  </div>
+);
+
+// ─── BRACKET ─────────────────────────────────────────────────────────────────
+const BracketView = () => {
+  const [cat, setCat] = useState("Masculino A");
+  const cats = ["Masculino A","Masculino B","Femenino A","Mixto B"];
+  const fixture = MOCK_DATA.fixture;
+  return (
+    <div>
+      <div style={{ display:"flex", gap:6, marginBottom:24, flexWrap:"wrap" }}>
+        {cats.map(c => (
+          <button key={c} onClick={()=>setCat(c)} style={{
+            padding:"8px 18px", borderRadius:20, border:"1.5px solid",
+            borderColor: cat===c ? G : "#e2e8f0",
+            background: cat===c ? GL : "#fff",
+            color: cat===c ? GD : "#64748b",
+            fontFamily:"inherit", fontSize:13, fontWeight:600, cursor:"pointer" }}>
+            {c}
+          </button>
+        ))}
+      </div>
+      <div style={{ overflowX:"auto", paddingBottom:12 }}>
+        <div style={{ display:"flex", gap:28,
+          minWidth: fixture.rondas.length * 248 }}>
+          {fixture.rondas.map((ronda, ri) => (
+            <div key={ri} style={{ width:218, flexShrink:0 }}>
+              <div style={{ fontSize:11, fontWeight:700, color:"#94a3b8",
+                textTransform:"uppercase", letterSpacing:"0.08em",
+                marginBottom:14, textAlign:"center" }}>{ronda.nombre}</div>
+              <div style={{ display:"flex", flexDirection:"column", gap:14 }}>
+                {ronda.partidos.map((p, pi) => (
+                  <PublicMatchCard key={pi} partido={p} />
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+const PublicMatchCard = ({ partido }) => {
+  const [hover, setHover] = useState(false);
+  return (
+    <div onMouseEnter={()=>setHover(true)} onMouseLeave={()=>setHover(false)}
+      style={{ background:hover?"#f8fafc":"#fff", borderRadius:11,
+        border:`1px solid ${partido.resultado ? "#bbf7d0" : "#e2e8f0"}`,
+        overflow:"hidden", transition:"all .15s",
+        boxShadow: hover ? "0 4px 14px rgba(0,0,0,0.08)" : "0 1px 3px rgba(0,0,0,0.05)" }}>
+      {[partido.local, partido.visitante].map((equipo, i) => {
+        const tbd = !equipo || equipo==="TBD";
+        const win = equipo===partido.ganador && partido.ganador;
+        return (
+          <div key={i} style={{
+            padding:"10px 14px",
+            display:"flex", alignItems:"center", justifyContent:"space-between",
+            borderBottom: i===0 ? "1px solid #f1f5f9" : "none",
+            background: win ? GL : "#fff" }}>
+            <div style={{ display:"flex", alignItems:"center", gap:7 }}>
+              {win && <span style={{ fontSize:11 }}>🏆</span>}
+              <span style={{ fontSize:13, fontWeight: win?700:400,
+                color: tbd?"#cbd5e1" : win?"#15803d" : "#334155" }}>
+                {tbd ? "Por definir" : equipo}
+              </span>
+            </div>
+            {partido.resultado && !tbd && (
+              <span style={{ fontSize:11, fontWeight:700,
+                color: win ? G : "#cbd5e1", fontFamily:"Space Grotesk, sans-serif" }}>
+                {win
+                  ? partido.resultado.split(", ").map(s=>s.split("-")[0]).join("-")
+                  : partido.resultado.split(", ").map(s=>s.split("-")[1]).join("-")}
+              </span>
+            )}
+          </div>
+        );
+      })}
+      {partido.hora && (
+        <div style={{ padding:"5px 12px", background:"#f8fafc",
+          display:"flex", gap:10 }}>
+          <span style={{ fontSize:10, color:"#94a3b8" }}>⏰ {partido.hora}</span>
+          <span style={{ fontSize:10, color:"#94a3b8" }}>📍 {partido.cancha}</span>
+        </div>
+      )}
+    </div>
+  );
+};
+
+// ─── GRUPOS ───────────────────────────────────────────────────────────────────
+const GRUPOS_DATA = [
+  { nombre:"Grupo A", parejas:[
+    { nombre:"Torres / Sánchez",   j:3, g:3, p:0, sf:6, sc:1, pts:9 },
+    { nombre:"Peralta / Gómez",    j:3, g:2, p:1, sf:4, sc:3, pts:6 },
+    { nombre:"Morales / Herrera",  j:3, g:1, p:2, sf:2, sc:4, pts:3 },
+    { nombre:"Ríos / Vega",        j:3, g:0, p:3, sf:0, sc:6, pts:0 },
+  ]},
+  { nombre:"Grupo B", parejas:[
+    { nombre:"Mendez / Acosta",    j:3, g:3, p:0, sf:6, sc:2, pts:9 },
+    { nombre:"Suárez / Bravo",     j:3, g:2, p:1, sf:5, sc:4, pts:6 },
+    { nombre:"Ibarra / Meza",      j:3, g:1, p:2, sf:3, sc:5, pts:3 },
+    { nombre:"Palma / Leiva",      j:3, g:0, p:3, sf:1, sc:6, pts:0 },
+  ]},
+];
+
+const GruposView = () => {
+  const [cat, setCat] = useState("Masculino A");
+  const cats = ["Masculino A","Femenino A"];
+  return (
+    <div>
+      <div style={{ display:"flex", gap:6, marginBottom:24, flexWrap:"wrap" }}>
+        {cats.map(c=>(
+          <button key={c} onClick={()=>setCat(c)} style={{
+            padding:"8px 18px", borderRadius:20, border:"1.5px solid",
+            borderColor:cat===c?G:"#e2e8f0", background:cat===c?GL:"#fff",
+            color:cat===c?GD:"#64748b", fontFamily:"inherit", fontSize:13,
+            fontWeight:600, cursor:"pointer" }}>{c}</button>
+        ))}
+      </div>
+      <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:16 }} className="grid-1-sm">
+        {GRUPOS_DATA.map(grupo => (
+          <div key={grupo.nombre} style={{ background:"#fff", borderRadius:14,
+            border:"1px solid #e2e8f0", overflow:"hidden",
+            boxShadow:"0 1px 4px rgba(0,0,0,0.05)" }}>
+            <div style={{ padding:"12px 18px", background:"#f8fafc",
+              borderBottom:"1px solid #e2e8f0", display:"flex",
+              justifyContent:"space-between", alignItems:"center" }}>
+              <span style={{ fontSize:14, fontWeight:700, color:"#0f172a",
+                fontFamily:"Space Grotesk, sans-serif" }}>{grupo.nombre}</span>
+              <span style={{ fontSize:11, color:"#94a3b8" }}>Clasifican top 2</span>
+            </div>
+            {/* Header */}
+            <div style={{ padding:"8px 18px", display:"grid",
+              gridTemplateColumns:"1fr 32px 32px 32px 32px 50px 44px",
+              gap:4, borderBottom:"1px solid #f1f5f9" }}>
+              {["Pareja","J","G","P","SF","SC","Pts"].map(h=>(
+                <span key={h} style={{ fontSize:10, fontWeight:700, color:"#94a3b8",
+                  textTransform:"uppercase", letterSpacing:"0.07em",
+                  textAlign: h==="Pareja"?"left":"center" }}>{h}</span>
+              ))}
+            </div>
+            {grupo.parejas.map((p,i)=>(
+              <div key={i} style={{ padding:"11px 18px", display:"grid",
+                gridTemplateColumns:"1fr 32px 32px 32px 32px 50px 44px",
+                gap:4, alignItems:"center",
+                borderBottom: i<grupo.parejas.length-1 ? "1px solid #f8fafc":"none",
+                background: i<2 ? "#fafffe":"#fff" }}>
+                <div style={{ display:"flex", alignItems:"center", gap:7 }}>
+                  {i<2 && <div style={{ width:5, height:5, borderRadius:"50%",
+                    background:G, flexShrink:0 }} />}
+                  <span style={{ fontSize:13, fontWeight: i<2?700:400,
+                    color: i<2?"#15803d":"#334155" }}>{p.nombre}</span>
+                </div>
+                {[p.j,p.g,p.p,p.sf,p.sc].map((v,vi)=>(
+                  <span key={vi} style={{ fontSize:12, color:"#64748b",
+                    textAlign:"center" }}>{v}</span>
+                ))}
+                <span style={{ fontSize:14, fontWeight:800,
+                  color: i<2?G:"#334155",
+                  fontFamily:"Space Grotesk, sans-serif",
+                  textAlign:"center" }}>{p.pts}</span>
+              </div>
+            ))}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+};
+
+// ─── AGENDA ───────────────────────────────────────────────────────────────────
+const AgendaContent = () => {
+  const [dia, setDia] = useState(0);
+  const dias = ["Mar 22 Abr","Mié 23 Abr","Jue 24 Abr","Vie 25 Abr","Sáb 26 Abr","Dom 27 Abr"];
+  return (
+    <div>
+      <div style={{ display:"flex", gap:8, marginBottom:24, overflowX:"auto", paddingBottom:4 }}>
+        {dias.map((d,i)=>(
+          <button key={i} onClick={()=>setDia(i)} style={{
+            padding:"8px 16px", borderRadius:10, border:"1.5px solid",
+            borderColor: dia===i?G:"#e2e8f0",
+            background: dia===i?GL:"#fff",
+            color: dia===i?GD:"#64748b",
+            fontFamily:"inherit", fontSize:12, fontWeight:600,
+            cursor:"pointer", whiteSpace:"nowrap",
+            boxShadow: dia===i?`0 0 0 3px ${GB}`:"none" }}>
+            {d}
+            {i===0&&<span style={{ marginLeft:5,padding:"0 5px",
+              background:G,color:"#fff",borderRadius:10,fontSize:9,fontWeight:800 }}>HOY</span>}
+          </button>
+        ))}
+      </div>
+      {dia===0 ? (
+        <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
+          {MOCK_DATA.agenda.map(a=>(
+            <div key={a.id} style={{ display:"grid",
+              gridTemplateColumns:"72px 1fr 130px 110px",
+              gap:14, padding:"16px 20px", alignItems:"center",
+              background: a.estado==="en_curso" ? GL : "#fff",
+              borderRadius:12,
+              border:`1px solid ${a.estado==="en_curso"?"#bbf7d0":"#e2e8f0"}`,
+              boxShadow:"0 1px 3px rgba(0,0,0,0.04)" }}>
+              <span style={{ fontSize:18, fontWeight:800,
+                color: a.estado==="en_curso"?G:"#0f172a",
+                fontFamily:"Space Grotesk, sans-serif" }}>{a.hora}</span>
+              <div>
+                <div style={{ fontSize:14, fontWeight:500, color:"#1e293b",
+                  marginBottom:2 }}>{a.partido}</div>
+                <div style={{ fontSize:11, color:"#94a3b8" }}>{a.cancha}</div>
+              </div>
+              <span style={{ fontSize:11, color:"#64748b", background:"#f1f5f9",
+                padding:"3px 10px", borderRadius:20, textAlign:"center",
+                justifySelf:"start" }}>{a.categoria}</span>
+              <Badge estado={a.estado} />
+            </div>
+          ))}
+        </div>
+      ) : (
+        <div style={{ textAlign:"center", padding:"60px 0", color:"#94a3b8" }}>
+          <div style={{ fontSize:40, marginBottom:12 }}>📅</div>
+          <div style={{ fontSize:15, color:"#64748b" }}>
+            Agenda de {dias[dia]} no disponible aún
+          </div>
+          <div style={{ fontSize:13, marginTop:4 }}>Los horarios se publican 24h antes</div>
+        </div>
+      )}
+    </div>
+  );
+};
+
+const AgendaTab = () => (
+  <div style={{ maxWidth:MAX, margin:"0 auto", padding:"32px 24px 56px" }} className="px-sm">
+    <h2 style={{ fontSize:18, fontWeight:700, color:"#0f172a",
+      fontFamily:"Space Grotesk, sans-serif", marginBottom:4 }}>Agenda de partidos</h2>
+    <p style={{ fontSize:13, color:"#94a3b8", marginBottom:24 }}>
+      Copa de Verano 2026 · Sede Central
+    </p>
+    <AgendaContent />
+  </div>
+);
+
+// ─── RANKING TAB ──────────────────────────────────────────────────────────────
+const RankingTab = ({ onPlayerClick }) => {
+  const [cat, setCat] = useState("Masculino A");
+  const cats = ["Masculino A","Masculino B","Femenino A","Mixto B"];
+  return (
+    <div style={{ maxWidth:MAX, margin:"0 auto", padding:"32px 24px 56px" }} className="px-sm">
+      <h2 style={{ fontSize:18, fontWeight:700, color:"#0f172a",
+        fontFamily:"Space Grotesk, sans-serif", marginBottom:4 }}>Ranking</h2>
+      <p style={{ fontSize:13, color:"#94a3b8", marginBottom:20 }}>
+        Club Pádel Buenos Aires · Temporada 2026
+      </p>
+
+      <div style={{ display:"flex", gap:6, marginBottom:24, flexWrap:"wrap" }}>
+        {cats.map(c=>(
+          <button key={c} onClick={()=>setCat(c)} style={{
+            padding:"8px 18px", borderRadius:20, border:"1.5px solid",
+            borderColor:cat===c?G:"#e2e8f0", background:cat===c?GL:"#fff",
+            color:cat===c?GD:"#64748b", fontFamily:"inherit",
+            fontSize:13, fontWeight:600, cursor:"pointer" }}>{c}</button>
+        ))}
+      </div>
+
+      {/* Podium */}
+      <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr 1fr",
+        gap:12, marginBottom:24, maxWidth:680 }}>
+        {MOCK_DATA.ranking.slice(0,3).map((r,i)=>(
+          <div key={i} style={{
+            background: i===0?"linear-gradient(145deg,#fef9c3,#fef08a)":"#fff",
+            border:`2px solid ${i===0?"#fbbf24":i===1?"#e2e8f0":"#fde68a"}`,
+            borderRadius:16, padding:"20px 16px", textAlign:"center",
+            boxShadow: i===0?"0 6px 24px rgba(251,191,36,.2)":"0 1px 4px rgba(0,0,0,.05)",
+            order: i===0?1:i===1?0:2, cursor:"pointer", transition:"all .15s" }}
+            className="card-hover"
+            onClick={()=>onPlayerClick(PLAYERS_DATA.find(p=>p.nombre.includes(r.pareja[0].split(",")[0])))}>
+            <div style={{ fontSize:28, marginBottom:8 }}>{["🥇","🥈","🥉"][i]}</div>
+            <div style={{ fontSize:13, fontWeight:800, color:"#0f172a",
+              fontFamily:"Space Grotesk, sans-serif", marginBottom:2 }}>{r.pareja[0]}</div>
+            <div style={{ fontSize:12, color:"#64748b", marginBottom:10 }}>{r.pareja[1]}</div>
+            <div style={{ fontSize:22, fontWeight:800, color:G,
+              fontFamily:"Space Grotesk, sans-serif" }}>{r.pts}</div>
+            <div style={{ fontSize:10, color:"#94a3b8",
+              textTransform:"uppercase", letterSpacing:"0.07em" }}>puntos</div>
+          </div>
+        ))}
+      </div>
+
+      {/* Table */}
+      <div style={{ background:"#fff", borderRadius:14, border:"1px solid #e2e8f0",
+        overflow:"hidden", boxShadow:"0 1px 4px rgba(0,0,0,.05)" }}>
+        <div style={{ padding:"11px 20px", borderBottom:"1px solid #f1f5f9",
+          display:"grid", gridTemplateColumns:"50px 1fr 100px 80px 80px 80px", gap:12 }}>
+          {["#","Pareja","Puntos","Torneos","V","D"].map(h=>(
+            <span key={h} style={{ fontSize:10, fontWeight:700, color:"#94a3b8",
+              textTransform:"uppercase", letterSpacing:"0.07em" }}>{h}</span>
+          ))}
+        </div>
+        {MOCK_DATA.ranking.map((r,i)=>(
+          <div key={i} onClick={()=>onPlayerClick(PLAYERS_DATA.find(p=>p.nombre.includes(r.pareja[0].split(",")[0])))}
+            style={{ padding:"13px 20px",
+              borderBottom:i<MOCK_DATA.ranking.length-1?"1px solid #f8fafc":"none",
+              display:"grid", gridTemplateColumns:"50px 1fr 100px 80px 80px 80px",
+              gap:12, alignItems:"center", cursor:"pointer",
+              background:i===0?"#f0fdf4":"#fff",
+              transition:"background .12s" }}
+            onMouseEnter={e=>e.currentTarget.style.background="#f8fafc"}
+            onMouseLeave={e=>e.currentTarget.style.background=i===0?"#f0fdf4":"#fff"}>
+            <span style={{ fontSize:13, fontWeight:800,
+              color:i<3?G:"#94a3b8",
+              fontFamily:"Space Grotesk, sans-serif",
+              textAlign:"center" }}>{r.pos}</span>
+            <div>
+              <div style={{ fontSize:13, fontWeight:700, color:"#0f172a" }}>{r.pareja[0]}</div>
+              <div style={{ fontSize:12, color:"#94a3b8" }}>{r.pareja[1]}</div>
+            </div>
+            <span style={{ fontSize:15, fontWeight:800,
+              color:i===0?G:"#334155",
+              fontFamily:"Space Grotesk, sans-serif", textAlign:"center" }}>{r.pts}</span>
+            <span style={{ fontSize:12, color:"#94a3b8", textAlign:"center" }}>{r.torneos}</span>
+            <span style={{ fontSize:12, color:"#16a34a", fontWeight:600, textAlign:"center" }}>{r.victorias}</span>
+            <span style={{ fontSize:12, color:"#dc2626", textAlign:"center" }}>{r.derrotas}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+};
+
+// ─── CUADROS TAB (standalone) ─────────────────────────────────────────────────
+const CuadrosTab = () => (
+  <div style={{ maxWidth:MAX, margin:"0 auto", padding:"32px 24px 56px" }} className="px-sm">
+    <h2 style={{ fontSize:18, fontWeight:700, color:"#0f172a",
+      fontFamily:"Space Grotesk, sans-serif", marginBottom:4 }}>Cuadros</h2>
+    <p style={{ fontSize:13, color:"#94a3b8", marginBottom:24 }}>
+      Copa de Verano 2026 · Actualizado en tiempo real
+    </p>
+    <BracketView />
+  </div>
+);
+
+// ─── JUGADORES TAB ────────────────────────────────────────────────────────────
+const JugadoresTab = ({ onPlayerClick, searchQuery }) => {
+  const [q, setQ] = useState(searchQuery || "");
+  const [cat, setCat] = useState("todas");
+  const cats = ["todas","Masculino A","Masculino B","Femenino A","Mixto B"];
+
+  useEffect(()=>{ if(searchQuery) setQ(searchQuery); }, [searchQuery]);
+
+  const filtered = PLAYERS_DATA.filter(p => {
+    const matchQ = !q || p.nombre.toLowerCase().includes(q.toLowerCase());
+    const matchC = cat==="todas" || p.categorias.includes(cat);
+    return matchQ && matchC;
+  });
+
+  return (
+    <div style={{ maxWidth:MAX, margin:"0 auto", padding:"32px 24px 56px" }} className="px-sm">
+      <h2 style={{ fontSize:18, fontWeight:700, color:"#0f172a",
+        fontFamily:"Space Grotesk, sans-serif", marginBottom:4 }}>Jugadores</h2>
+      <p style={{ fontSize:13, color:"#94a3b8", marginBottom:20 }}>
+        {PLAYERS_DATA.length} jugadores registrados · Temporada 2026
+      </p>
+
+      {/* Filters */}
+      <div style={{ display:"flex", gap:10, marginBottom:20, flexWrap:"wrap" }}>
+        <div style={{ position:"relative", flex:1, minWidth:200 }}>
+          <input value={q} onChange={e=>setQ(e.target.value)}
+            placeholder="Buscar jugador…"
+            style={{ width:"100%", padding:"9px 14px 9px 36px",
+              borderRadius:9, border:"1px solid #e2e8f0",
+              fontSize:13, outline:"none", background:"#fff",
+              fontFamily:"inherit", color:"#334155" }}
+          />
+          <span style={{ position:"absolute", left:11, top:"50%",
+            transform:"translateY(-50%)", color:"#cbd5e1", fontSize:14 }}>🔍</span>
+        </div>
+        <div style={{ display:"flex", gap:5, flexWrap:"wrap" }}>
+          {cats.map(c=>(
+            <button key={c} onClick={()=>setCat(c)} style={{
+              padding:"8px 14px", borderRadius:9, border:"1.5px solid",
+              borderColor:cat===c?G:"#e2e8f0", background:cat===c?GL:"#fff",
+              color:cat===c?GD:"#64748b", fontFamily:"inherit",
+              fontSize:12, fontWeight:600, cursor:"pointer",
+              whiteSpace:"nowrap" }}>
+              {c==="todas"?"Todas":c}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Grid */}
+      <div style={{ display:"grid",
+        gridTemplateColumns:"repeat(auto-fill,minmax(240px,1fr))",
+        gap:12 }} className="grid-1-sm">
+        {filtered.map(p=>(
+          <div key={p.id} onClick={()=>onPlayerClick(p)}
+            className="card-hover"
+            style={{ background:"#fff", borderRadius:14,
+              border:"1px solid #e2e8f0",
+              padding:"18px 18px", cursor:"pointer",
+              boxShadow:"0 1px 3px rgba(0,0,0,0.05)" }}>
+            <div style={{ display:"flex", alignItems:"center", gap:12, marginBottom:12 }}>
+              <Avatar initials={p.avatar} size={44}
+                color={Object.values(p.ranking||{})[0]===1?"#f59e0b":G} />
+              <div>
+                <div style={{ fontSize:14, fontWeight:700, color:"#0f172a",
+                  fontFamily:"Space Grotesk, sans-serif" }}>{p.nombre}</div>
+                <div style={{ fontSize:11, color:"#94a3b8" }}>{p.sede}</div>
+              </div>
+            </div>
+            {/* Rankings */}
+            <div style={{ display:"flex", flexWrap:"wrap", gap:4, marginBottom:10 }}>
+              {Object.entries(p.ranking||{}).map(([cat,pos])=>(
+                <span key={cat} style={{ fontSize:10, padding:"2px 8px",
+                  borderRadius:20, fontWeight:700,
+                  background:pos===1?"#fef9c3":GL,
+                  color:pos===1?"#a16207":GD,
+                  border:`1px solid ${pos===1?"#fde68a":GB}` }}>
+                  #{pos} {cat}
+                </span>
+              ))}
+            </div>
+            {/* Stats */}
+            <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr 1fr",
+              gap:8, padding:"10px 0",
+              borderTop:"1px solid #f1f5f9" }}>
+              {[
+                { label:"Torneos", v:p.torneos, c:"#3b82f6" },
+                { label:"Victorias", v:p.victorias, c:G },
+                { label:"Puntos", v:p.puntos, c:"#0f172a" },
+              ].map(s=>(
+                <div key={s.label} style={{ textAlign:"center" }}>
+                  <div style={{ fontSize:17, fontWeight:800, color:s.c,
+                    fontFamily:"Space Grotesk, sans-serif" }}>{s.v}</div>
+                  <div style={{ fontSize:10, color:"#94a3b8",
+                    textTransform:"uppercase", letterSpacing:"0.06em" }}>{s.label}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+        ))}
+        {filtered.length===0 && (
+          <div style={{ gridColumn:"1/-1", textAlign:"center",
+            padding:"48px 0", color:"#94a3b8" }}>
+            <div style={{ fontSize:36, marginBottom:10, opacity:.4 }}>👤</div>
+            <div>No se encontraron jugadores con ese criterio</div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
+
+// ─── PLAYER PROFILE MODAL ─────────────────────────────────────────────────────
+const PlayerModal = ({ player, onClose }) => {
+  if (!player) return null;
+  const winRate = player.victorias+player.derrotas>0
+    ? Math.round(player.victorias/(player.victorias+player.derrotas)*100) : 0;
+  return (
+    <div className="overlay-bg" onClick={e=>e.target===e.currentTarget&&onClose()}>
+      <div className="overlay-card" style={{ maxWidth:480 }}>
+        {/* Header */}
+        <div style={{ background:"linear-gradient(135deg,#0f172a,#1a2744 60%,#14532d)",
+          padding:"28px 24px 22px", position:"relative" }}>
+          <button onClick={onClose} style={{ position:"absolute", top:16, right:16,
+            background:"rgba(255,255,255,0.1)", border:"none", color:"#94a3b8",
+            width:30, height:30, borderRadius:8, cursor:"pointer", fontSize:13 }}>✕</button>
+          <div style={{ display:"flex", alignItems:"center", gap:14 }}>
+            <div style={{ width:56, height:56, borderRadius:14,
+              background:"rgba(163,230,53,0.2)", border:"2px solid rgba(163,230,53,0.4)",
+              display:"flex", alignItems:"center", justifyContent:"center",
+              fontSize:22, fontWeight:800, color:"#a3e635",
+              fontFamily:"Space Grotesk, sans-serif" }}>{player.avatar}</div>
+            <div>
+              <div style={{ fontSize:18, fontWeight:800, color:"#f8fafc",
+                fontFamily:"Space Grotesk, sans-serif" }}>{player.nombre}</div>
+              <div style={{ fontSize:12, color:"#64748b", marginTop:2 }}>
+                {player.sede} · Registrado {player.fechaRegistro}
+              </div>
+            </div>
+          </div>
+          {/* Ranking badges */}
+          <div style={{ display:"flex", flexWrap:"wrap", gap:6, marginTop:14 }}>
+            {Object.entries(player.ranking||{}).map(([cat,pos])=>(
+              <span key={cat} style={{ padding:"3px 10px", borderRadius:20,
+                fontSize:10, fontWeight:700,
+                background:pos===1?"rgba(251,191,36,0.2)":"rgba(163,230,53,0.12)",
+                color:pos===1?"#fbbf24":"#a3e635",
+                border:`1px solid ${pos===1?"rgba(251,191,36,0.3)":"rgba(163,230,53,0.25)"}` }}>
+                #{pos} {cat}
+              </span>
+            ))}
+          </div>
+        </div>
+
+        {/* Stats */}
+        <div style={{ display:"grid", gridTemplateColumns:"repeat(4,1fr)",
+          borderBottom:"1px solid #f1f5f9" }}>
+          {[
+            { label:"Torneos",  v:player.torneos,   c:"#3b82f6" },
+            { label:"Victorias",v:player.victorias, c:G         },
+            { label:"Derrotas", v:player.derrotas,  c:"#dc2626" },
+            { label:"Puntos",   v:player.puntos,    c:"#0f172a" },
+          ].map(s=>(
+            <div key={s.label} style={{ padding:"16px 8px", textAlign:"center",
+              borderRight:"1px solid #f1f5f9" }}>
+              <div style={{ fontSize:22, fontWeight:800, color:s.c,
+                fontFamily:"Space Grotesk, sans-serif" }}>{s.v}</div>
+              <div style={{ fontSize:10, color:"#94a3b8",
+                textTransform:"uppercase", letterSpacing:"0.06em",
+                marginTop:2 }}>{s.label}</div>
+            </div>
+          ))}
+        </div>
+
+        {/* Win rate */}
+        <div style={{ padding:"16px 22px", borderBottom:"1px solid #f1f5f9" }}>
+          <div style={{ display:"flex", justifyContent:"space-between", marginBottom:6 }}>
+            <span style={{ fontSize:11, fontWeight:700, color:"#94a3b8",
+              textTransform:"uppercase", letterSpacing:"0.07em" }}>
+              Ratio de victorias
+            </span>
+            <span style={{ fontSize:12, fontWeight:800, color:G }}>{winRate}%</span>
+          </div>
+          <div style={{ height:6, background:"#f1f5f9", borderRadius:6, overflow:"hidden" }}>
+            <div style={{ height:"100%", background:G,
+              width:`${winRate}%`, borderRadius:6 }} />
+          </div>
+        </div>
+
+        {/* Historial */}
+        <div style={{ padding:"16px 22px", maxHeight:220, overflowY:"auto" }}>
+          <div style={{ fontSize:11, fontWeight:700, color:"#94a3b8",
+            textTransform:"uppercase", letterSpacing:"0.07em", marginBottom:12 }}>
+            Historial de torneos
+          </div>
+          {(player.historial||[]).length===0 ? (
+            <div style={{ fontSize:13, color:"#cbd5e1", textAlign:"center",
+              padding:"16px 0" }}>Sin historial aún</div>
+          ) : (player.historial||[]).map((h,i)=>(
+            <div key={i} style={{ display:"flex", justifyContent:"space-between",
+              alignItems:"center", padding:"10px 0",
+              borderBottom:i<player.historial.length-1?"1px solid #f8fafc":"none" }}>
+              <div>
+                <div style={{ fontSize:13, fontWeight:600, color:"#1e293b" }}>
+                  {h.torneo}
+                </div>
+                <div style={{ fontSize:11, color:"#94a3b8" }}>
+                  {h.categoria} · con {h.pareja}
+                </div>
+              </div>
+              <span style={{ fontSize:12, fontWeight:h.resultado?.includes("🏆")?800:500,
+                color:h.resultado?.includes("🏆")?G:"#64748b",
+                marginLeft:12, flexShrink:0 }}>{h.resultado}</span>
+            </div>
+          ))}
+        </div>
+
+        <div style={{ padding:"14px 22px", borderTop:"1px solid #f1f5f9",
+          background:"#f8fafc" }}>
+          <button onClick={onClose} style={{ width:"100%", padding:"10px",
+            borderRadius:10, border:"1px solid #e2e8f0", background:"#fff",
+            fontFamily:"inherit", fontSize:13, fontWeight:600, color:"#475569",
+            cursor:"pointer" }}>Cerrar</button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// ─── INSCRIPCIÓN MODAL ────────────────────────────────────────────────────────
+const InscripcionModal = ({ torneo, onClose }) => {
+  const [step, setStep] = useState(1);
+  const [form, setForm] = useState({
+    jugador1nombre:"", jugador1email:"", jugador1telefono:"",
+    jugador2nombre:"", jugador2email:"", jugador2telefono:"",
+    categoria:"", mensaje:"",
+  });
+  const [submitted, setSubmitted] = useState(false);
+
+  const setF = k => v => setForm(f=>({...f,[k]:v}));
+  const cats = (torneo?.categorias||[]).filter(c=>c.estado!=="llena"&&c.estado!=="cerrada");
+
+  const canNext1 = form.jugador1nombre && form.jugador1email && form.jugador2nombre && form.jugador2email;
+  const canNext2 = form.categoria;
+
+  const IField = ({label, k, type="text", placeholder}) => (
+    <div style={{ marginBottom:14 }}>
+      <label style={{ display:"block", fontSize:11, fontWeight:700, color:"#64748b",
+        textTransform:"uppercase", letterSpacing:"0.07em", marginBottom:6 }}>{label}</label>
+      <input type={type} value={form[k]} onChange={e=>setF(k)(e.target.value)}
+        placeholder={placeholder}
+        style={{ width:"100%", padding:"9px 14px", borderRadius:8,
+          border:"1px solid #e2e8f0", fontFamily:"inherit", fontSize:13,
+          outline:"none", color:"#1e293b", background:"#f8fafc",
+          transition:"border-color .15s" }}
+        onFocus={e=>e.target.style.borderColor=G}
+        onBlur={e=>e.target.style.borderColor="#e2e8f0"}
+      />
+    </div>
+  );
+
+  return (
+    <div className="overlay-bg" onClick={e=>e.target===e.currentTarget&&onClose()}>
+      <div className="overlay-card" style={{ maxWidth:500 }}>
+        {/* Header */}
+        <div style={{ padding:"20px 24px 16px",
+          borderBottom:"1px solid #f1f5f9",
+          display:"flex", alignItems:"center", justifyContent:"space-between" }}>
+          <div>
+            <div style={{ fontSize:16, fontWeight:800, color:"#0f172a",
+              fontFamily:"Space Grotesk, sans-serif" }}>
+              {submitted ? "¡Solicitud enviada!" : "Pre-inscripción"}
+            </div>
+            {!submitted && <div style={{ fontSize:12, color:"#94a3b8", marginTop:2 }}>
+              {torneo?.nombre}
+            </div>}
+          </div>
+          <button onClick={onClose} style={{ background:"#f1f5f9", border:"none",
+            color:"#64748b", width:30, height:30, borderRadius:8,
+            cursor:"pointer", fontSize:13 }}>✕</button>
+        </div>
+
+        {/* Progress */}
+        {!submitted && (
+          <div style={{ padding:"14px 24px 0", display:"flex", gap:6 }}>
+            {["Datos","Categoría","Confirmación"].map((s,i)=>(
+              <div key={i} style={{ flex:1, display:"flex", flexDirection:"column", gap:4 }}>
+                <div style={{ height:3, borderRadius:3,
+                  background: step>i+1?G:step===i+1?"#bbf7d0":"#e2e8f0" }} />
+                <span style={{ fontSize:10, fontWeight:600,
+                  color:step===i+1?G:step>i+1?"#94a3b8":"#cbd5e1",
+                  textTransform:"uppercase", letterSpacing:"0.06em" }}>{s}</span>
+              </div>
+            ))}
+          </div>
+        )}
+
+        <div style={{ padding:"20px 24px", maxHeight:380, overflowY:"auto" }}>
+          {submitted ? (
+            <div style={{ textAlign:"center", padding:"16px 0 8px" }}>
+              <div style={{ fontSize:56, marginBottom:16 }}>✅</div>
+              <h3 style={{ fontSize:18, fontWeight:800, color:"#0f172a",
+                fontFamily:"Space Grotesk, sans-serif", marginBottom:8 }}>
+                ¡Solicitud recibida!
+              </h3>
+              <p style={{ fontSize:13, color:"#64748b", lineHeight:1.6, marginBottom:20 }}>
+                Tu solicitud de inscripción para <strong>{form.categoria}</strong> fue enviada.<br/>
+                El organizador la revisará y recibirás confirmación en <strong>24–48hs</strong> al email registrado.
+              </p>
+              <div style={{ background:GL, borderRadius:12, border:"1px solid #bbf7d0",
+                padding:"14px 16px", textAlign:"left", marginBottom:0 }}>
+                <div style={{ fontSize:12, fontWeight:700, color:GD, marginBottom:8 }}>Resumen de la solicitud</div>
+                {[
+                  {label:"Pareja", value:`${form.jugador1nombre} / ${form.jugador2nombre}`},
+                  {label:"Categoría", value:form.categoria},
+                  {label:"Torneo", value:torneo?.nombre},
+                ].map(f=>(
+                  <div key={f.label} style={{ display:"flex", justifyContent:"space-between",
+                    fontSize:12, marginBottom:4 }}>
+                    <span style={{ color:"#64748b" }}>{f.label}</span>
+                    <span style={{ fontWeight:600, color:"#0f172a" }}>{f.value}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ) : step===1 ? (
+            <div>
+              <div style={{ fontSize:12, color:"#64748b", marginBottom:16 }}>
+                Ingresá los datos de ambos jugadores de la pareja
+              </div>
+              <div style={{ padding:"14px 16px", background:"#f8fafc",
+                borderRadius:10, border:"1px solid #e2e8f0", marginBottom:18 }}>
+                <div style={{ fontSize:12, fontWeight:700, color:"#334155", marginBottom:10 }}>
+                  Jugador 1
+                </div>
+                <IField label="Nombre completo *" k="jugador1nombre" placeholder="Ej: Martín García" />
+                <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:10 }}>
+                  <IField label="Email *" k="jugador1email" type="email" placeholder="email@mail.com" />
+                  <IField label="Teléfono" k="jugador1telefono" placeholder="+54 9 11..." />
+                </div>
+              </div>
+              <div style={{ padding:"14px 16px", background:"#f8fafc",
+                borderRadius:10, border:"1px solid #e2e8f0" }}>
+                <div style={{ fontSize:12, fontWeight:700, color:"#334155", marginBottom:10 }}>
+                  Jugador 2
+                </div>
+                <IField label="Nombre completo *" k="jugador2nombre" placeholder="Ej: Carlos López" />
+                <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:10 }}>
+                  <IField label="Email *" k="jugador2email" type="email" placeholder="email@mail.com" />
+                  <IField label="Teléfono" k="jugador2telefono" placeholder="+54 9 11..." />
+                </div>
+              </div>
+            </div>
+          ) : step===2 ? (
+            <div>
+              <div style={{ fontSize:12, color:"#64748b", marginBottom:16 }}>
+                Seleccioná la categoría en la que quieren participar
+              </div>
+              {cats.length===0 ? (
+                <div style={{ textAlign:"center", padding:"32px 0", color:"#94a3b8" }}>
+                  <div style={{ fontSize:32, marginBottom:8 }}>😔</div>
+                  <div>No hay categorías con cupo disponible</div>
+                </div>
+              ) : (
+                <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
+                  {cats.map(c=>(
+                    <div key={c.id} onClick={()=>setF("categoria")(c.nombre)}
+                      style={{ padding:"14px 16px", borderRadius:10, cursor:"pointer",
+                        border:`2px solid ${form.categoria===c.nombre?G:"#e2e8f0"}`,
+                        background:form.categoria===c.nombre?GL:"#fff",
+                        transition:"all .12s" }}>
+                      <div style={{ display:"flex", justifyContent:"space-between",
+                        alignItems:"center", marginBottom:8 }}>
+                        <span style={{ fontSize:14, fontWeight:700,
+                          color:form.categoria===c.nombre?GD:"#0f172a",
+                          fontFamily:"Space Grotesk, sans-serif" }}>{c.nombre}</span>
+                        <div style={{ width:20, height:20, borderRadius:"50%",
+                          border:`2px solid ${form.categoria===c.nombre?G:"#e2e8f0"}`,
+                          background:form.categoria===c.nombre?G:"transparent",
+                          display:"flex", alignItems:"center",
+                          justifyContent:"center", fontSize:11, color:"#fff" }}>
+                          {form.categoria===c.nombre?"✓":""}
+                        </div>
+                      </div>
+                      <Progress value={c.inscriptos} max={c.cupo} h={4} />
+                      <div style={{ fontSize:11, color:"#94a3b8", marginTop:6 }}>
+                        {c.cupo-c.inscriptos} lugares disponibles
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+              <div style={{ marginTop:16 }}>
+                <label style={{ display:"block", fontSize:11, fontWeight:700, color:"#64748b",
+                  textTransform:"uppercase", letterSpacing:"0.07em", marginBottom:6 }}>
+                  Mensaje al organizador (opcional)
+                </label>
+                <textarea value={form.mensaje} onChange={e=>setF("mensaje")(e.target.value)}
+                  rows={2} placeholder="Algún comentario o aclaración..."
+                  style={{ width:"100%", padding:"9px 14px", borderRadius:8,
+                    border:"1px solid #e2e8f0", fontFamily:"inherit", fontSize:13,
+                    outline:"none", resize:"none", color:"#1e293b" }} />
+              </div>
+            </div>
+          ) : (
+            <div>
+              <div style={{ fontSize:12, color:"#64748b", marginBottom:16 }}>
+                Revisá los datos antes de enviar
+              </div>
+              {[
+                {label:"Jugador 1", value:`${form.jugador1nombre} · ${form.jugador1email}`},
+                {label:"Jugador 2", value:`${form.jugador2nombre} · ${form.jugador2email}`},
+                {label:"Categoría", value:form.categoria},
+                {label:"Torneo", value:torneo?.nombre},
+              ].map(f=>(
+                <div key={f.label} style={{ display:"flex", justifyContent:"space-between",
+                  padding:"11px 0", borderBottom:"1px solid #f1f5f9",
+                  alignItems:"flex-start", gap:12 }}>
+                  <span style={{ fontSize:12, color:"#94a3b8", flexShrink:0 }}>{f.label}</span>
+                  <span style={{ fontSize:13, fontWeight:600, color:"#0f172a",
+                    textAlign:"right" }}>{f.value}</span>
+                </div>
+              ))}
+              <div style={{ marginTop:16, padding:14, background:GL,
+                borderRadius:10, border:"1px solid #bbf7d0",
+                fontSize:12, color:"#4b7a5c", lineHeight:1.5 }}>
+                ℹ El organizador revisará tu solicitud y te notificará por email en 24–48hs hábiles.
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Footer */}
+        <div style={{ padding:"14px 24px", borderTop:"1px solid #f1f5f9",
+          display:"flex", justifyContent:"flex-end", gap:8 }}>
+          {submitted ? (
+            <Btn variant="primary" onClick={onClose} style={{ minWidth:120 }}>Cerrar</Btn>
+          ) : (
+            <>
+              <Btn variant="ghost" onClick={step>1?()=>setStep(s=>s-1):onClose}>
+                {step>1?"← Atrás":"Cancelar"}
+              </Btn>
+              {step<3
+                ? <Btn variant="primary"
+                    onClick={()=>setStep(s=>s+1)}
+                    style={{ opacity:(step===1&&!canNext1)||(step===2&&!canNext2)?.5:1,
+                      pointerEvents:(step===1&&!canNext1)||(step===2&&!canNext2)?"none":"auto" }}>
+                    Siguiente →
+                  </Btn>
+                : <Btn variant="primary" onClick={()=>setSubmitted(true)}>
+                    ✍ Enviar solicitud
+                  </Btn>
+              }
+            </>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// ─── APP ──────────────────────────────────────────────────────────────────────
+function App() {
+  const [tab, setTab] = useState(()=>localStorage.getItem("portal_tab_v2")||"torneos");
+  const [selectedTorneo, setSelectedTorneo] = useState(null);
+  const [playerModal, setPlayerModal] = useState(null);
+  const [inscripcionModal, setInscripcionModal] = useState(null);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [authModal, setAuthModal] = useState(null); // "login" | "register" | null
+  const [currentUser, setCurrentUser] = useState(()=>{
+    try { const u = localStorage.getItem("portal_user_v2"); return u ? JSON.parse(u) : null; } catch { return null; }
+  });
+
+  useEffect(()=>{ localStorage.setItem("portal_tab_v2", tab); }, [tab]);
+  useEffect(()=>{
+    if (currentUser) localStorage.setItem("portal_user_v2", JSON.stringify(currentUser));
+    else localStorage.removeItem("portal_user_v2");
+  }, [currentUser]);
+
+  const handleTabChange = t => { setTab(t); setSelectedTorneo(null); };
+
+  const handleSearch = q => {
+    setSearchQuery(q);
+    if (q.length > 1) { setTab("jugadores"); setSelectedTorneo(null); }
+  };
+
+  const handleInscribirse = torneo => {
+    if (!currentUser) { setAuthModal("login"); return; }
+    setInscripcionModal(torneo);
+  };
+
+  const handleLogout = () => { setCurrentUser(null); };
+
+  return (
+    <div style={{ minHeight:"100vh", background:"#f1f5f9" }}>
+      <LiveTicker />
+      <Header tab={tab} setTab={handleTabChange} onSearch={handleSearch}
+        currentUser={currentUser}
+        onOpenAuth={setAuthModal}
+        onLogout={handleLogout}
+      />
+
+      {/* Modals */}
+      {authModal && (
+        <AuthModal
+          defaultTab={authModal}
+          onClose={()=>setAuthModal(null)}
+          onLogin={user=>setCurrentUser(user)}
+        />
+      )}
+      {playerModal && <PlayerModal player={playerModal} onClose={()=>setPlayerModal(null)} />}
+      {inscripcionModal && (
+        <InscripcionModal torneo={inscripcionModal} onClose={()=>setInscripcionModal(null)} />
+      )}
+
+      <div className="fade-up" key={tab+(selectedTorneo?.id||"")}>
+        {tab==="torneos" && !selectedTorneo && (
+          <TorneosTab onSelectTorneo={t=>{setSelectedTorneo(t);}} />
+        )}
+        {tab==="torneos" && selectedTorneo && (
+          <TorneoDetalle
+            torneo={selectedTorneo}
+            onBack={()=>setSelectedTorneo(null)}
+            onInscribirse={handleInscribirse}
+          />
+        )}
+        {tab==="cuadros"    && <CuadrosTab />}
+        {tab==="agenda"     && <AgendaTab />}
+        {tab==="ranking"    && <RankingTab onPlayerClick={setPlayerModal} />}
+        {tab==="jugadores"  && <JugadoresTab onPlayerClick={setPlayerModal} searchQuery={searchQuery} />}
+      </div>
+
+      <footer style={{ borderTop:"1px solid #e2e8f0", padding:"24px 20px",
+        background:"#fff", marginTop:8 }}>
+        <div style={{ maxWidth:MAX, margin:"0 auto",
+          display:"flex", justifyContent:"space-between", alignItems:"center",
+          flexWrap:"wrap", gap:12 }}>
+          <div style={{ display:"flex", alignItems:"center", gap:8 }}>
+            <span style={{ fontSize:20 }}>🎾</span>
+            <div>
+              <div style={{ fontSize:13, fontWeight:700, color:"#0f172a",
+                fontFamily:"Space Grotesk, sans-serif" }}>
+                Club Pádel Buenos Aires
+              </div>
+              <div style={{ fontSize:11, color:"#94a3b8" }}>
+                Av. del Libertador 5200, CABA · info@padelclub.com.ar
+              </div>
+            </div>
+          </div>
+          <span style={{ fontSize:11, color:"#cbd5e1" }}>
+            Powered by PadelPro · 2026
+          </span>
+        </div>
+      </footer>
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById("root")).render(<App />);
+</script>
+</body>
+</html>

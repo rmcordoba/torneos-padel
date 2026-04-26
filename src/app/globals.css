@@ -1,0 +1,151 @@
+@import "tailwindcss";
+@import url("https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;1,9..40,300&display=swap");
+
+/* ─── Design tokens ─────────────────────────────────────────────────────────── */
+:root {
+  --bg-base:     oklch(12% 0.015 250);
+  --bg-surface:  oklch(19% 0.012 250);
+  --bg-sidebar:  oklch(14% 0.015 250);
+  --bg-elevated: oklch(22% 0.012 250);
+  --bg-input:    oklch(22% 0.012 250);
+
+  --border-subtle:  oklch(22% 0.01 250);
+  --border-default: oklch(28% 0.01 250);
+  --border-strong:  oklch(30% 0.01 250);
+  --border-hover:   oklch(34% 0.01 250);
+
+  --accent:     #a3e635;
+  --accent-10:  rgba(163, 230, 53, 0.10);
+  --accent-15:  rgba(163, 230, 53, 0.15);
+  --accent-20:  rgba(163, 230, 53, 0.20);
+  --accent-30:  rgba(163, 230, 53, 0.30);
+
+  --text-primary:   #f1f5f9;
+  --text-secondary: #e2e8f0;
+  --text-muted:     #94a3b8;
+  --text-faint:     #64748b;
+  --text-dimmer:    #475569;
+  --text-darkest:   #334155;
+}
+
+/* ─── Base ───────────────────────────────────────────────────────────────────── */
+@layer base {
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: #f1f5f9;
+    color: #1e293b;
+    font-family: "DM Sans", sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    font-family: "Space Grotesk", sans-serif;
+    font-weight: 700;
+    color: #0f172a;
+    line-height: 1.2;
+  }
+
+  input, textarea, select, button { font-family: inherit; }
+
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--border-default); border-radius: 3px; }
+  ::-webkit-scrollbar-thumb:hover { background: var(--border-strong); }
+}
+
+/* ─── Animations ─────────────────────────────────────────────────────────────── */
+@keyframes pulse-dot {
+  0%, 100% { opacity: 1; box-shadow: 0 0 0 0 rgba(163, 230, 53, 0.4); }
+  50%       { opacity: 0.6; box-shadow: 0 0 6px 4px rgba(163, 230, 53, 0); }
+}
+@keyframes fade-in {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes slide-in {
+  from { opacity: 0; transform: translateX(-6px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+
+/* ─── Utilities ──────────────────────────────────────────────────────────────── */
+@layer utilities {
+  .font-display { font-family: "Space Grotesk", sans-serif; }
+
+  /* Hide scrollbar */
+  .scrollbar-none { scrollbar-width: none; }
+  .scrollbar-none::-webkit-scrollbar { display: none; }
+
+  /* Surface cards */
+  .surface {
+    background: var(--bg-surface);
+    border: 1px solid var(--border-default);
+    border-radius: 12px;
+  }
+  .surface-elevated {
+    background: var(--bg-elevated);
+    border: 1px solid var(--border-strong);
+    border-radius: 10px;
+  }
+
+  /* Input fields */
+  .field-input {
+    width: 100%;
+    padding: 9px 14px;
+    background: var(--bg-input);
+    border: 1px solid var(--border-strong);
+    border-radius: 8px;
+    color: var(--text-secondary);
+    font-size: 13px;
+    outline: none;
+    transition: border-color 0.15s;
+  }
+  .field-input:focus { border-color: var(--accent-30); }
+  .field-input::placeholder { color: var(--text-dimmer); }
+
+  /* Page title */
+  .page-title {
+    font-family: "Space Grotesk", sans-serif;
+    font-size: 22px;
+    font-weight: 700;
+    color: var(--text-primary);
+  }
+
+  /* Animate utilities */
+  .animate-fade-in  { animation: fade-in  0.25s ease forwards; }
+  .animate-slide-in { animation: slide-in 0.2s  ease forwards; }
+
+  /* Pulse dot for live status */
+  .status-live {
+    display: inline-block;
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: var(--accent);
+    animation: pulse-dot 1.5s infinite;
+  }
+
+  /* Filter pill buttons */
+  .filter-pill {
+    padding: 6px 14px;
+    border-radius: 20px;
+    border: 1px solid var(--border-default);
+    background: transparent;
+    color: var(--text-faint);
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.12s;
+  }
+  .filter-pill:hover { border-color: var(--border-hover); color: var(--text-muted); }
+  .filter-pill.active {
+    border-color: var(--accent-30);
+    background: var(--accent-10);
+    color: var(--accent);
+  }
+
+  /* Row hover */
+  .row-hover {
+    transition: border-color 0.15s, background 0.15s;
+  }
+  .row-hover:hover { border-color: var(--accent-30) !important; }
+}

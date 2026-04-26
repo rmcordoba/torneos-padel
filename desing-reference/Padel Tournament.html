@@ -1,0 +1,332 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PadelPro — Gestión de Torneos</title>
+  <script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;1,9..40,300&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { height: 100%; }
+    body {
+      font-family: "DM Sans", sans-serif;
+      background: oklch(12% 0.015 250);
+      color: #e2e8f0;
+      -webkit-font-smoothing: antialiased;
+    }
+    #root { height: 100%; }
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: oklch(28% 0.01 250); border-radius: 3px; }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.4; }
+    }
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(8px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    @keyframes slideIn {
+      from { opacity: 0; transform: translateX(-8px); }
+      to { opacity: 1; transform: translateX(0); }
+    }
+    .view-enter { animation: fadeIn 0.25s ease forwards; }
+
+    /* Tweaks panel */
+    #tweaks-panel {
+      position: fixed; bottom: 24px; right: 24px;
+      background: oklch(19% 0.012 250);
+      border: 1px solid oklch(32% 0.01 250);
+      border-radius: 14px; padding: 18px 20px; width: 240px;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+      z-index: 1000; display: none;
+      animation: fadeIn 0.2s ease;
+    }
+    #tweaks-panel.visible { display: block; }
+    #tweaks-panel h3 { font-family: "Space Grotesk", sans-serif; font-size: 13px; font-weight: 700; color: #f1f5f9; margin-bottom: 14px; }
+    .tweak-row { margin-bottom: 12px; }
+    .tweak-row label { display: block; font-size: 11px; color: #64748b; font-weight: 600; text-transform: uppercase; letter-spacing: 0.07em; margin-bottom: 6px; }
+    .tweak-row select, .tweak-row input[type=range] { width: 100%; background: oklch(24% 0.01 250); border: 1px solid oklch(30% 0.01 250); border-radius: 6px; color: #e2e8f0; font-family: inherit; font-size: 12px; padding: 6px 10px; outline: none; cursor: pointer; }
+  </style>
+</head>
+<body>
+<div id="root"></div>
+
+<div id="tweaks-panel">
+  <h3>Tweaks</h3>
+  <div class="tweak-row">
+    <label>Accent color</label>
+    <select id="tweak-accent">
+      <option value="#a3e635">Verde lima (default)</option>
+      <option value="#60a5fa">Azul eléctrico</option>
+      <option value="#f97316">Naranja vivo</option>
+      <option value="#e879f9">Fucsia</option>
+    </select>
+  </div>
+  <div class="tweak-row">
+    <label>Densidad de UI</label>
+    <select id="tweak-density">
+      <option value="normal">Normal</option>
+      <option value="compact">Compacta</option>
+    </select>
+  </div>
+  <div class="tweak-row">
+    <label>Vista de rol</label>
+    <select id="tweak-role">
+      <option value="organizador">Organizador</option>
+      <option value="colaborador">Colaborador</option>
+      <option value="superadmin">Super Admin</option>
+    </select>
+  </div>
+</div>
+
+<script src="padel-data.js"></script>
+<script src="padel-data2.js"></script>
+<script type="text/babel" src="padel-ui.jsx"></script>
+<script type="text/babel" src="padel-views.jsx"></script>
+<script type="text/babel" src="padel-views2.jsx"></script>
+<script type="text/babel" src="padel-config.jsx"></script>
+<script type="text/babel" src="padel-crud.jsx"></script>
+<script type="text/babel" src="padel-fixture.jsx"></script>
+<script type="text/babel" src="padel-auditoria.jsx"></script>
+
+<script type="text/babel">
+const { useState, useEffect, useCallback } = React;
+
+const TWEAK_DEFAULTS = /*EDITMODE-BEGIN*/{
+  "accentColor": "#a3e635",
+  "density": "normal",
+  "role": "organizador"
+}/*EDITMODE-END*/;
+
+const NAV_ITEMS = [
+  { id: "dashboard",     icon: "⬡",  label: "Dashboard" },
+  { id: "torneos",       icon: "🏆", label: "Torneos" },
+  { id: "jugadores",     icon: "👥", label: "Jugadores" },
+  { id: "fixture",       icon: "⚡", label: "Fixture" },
+  { id: "calendario",    icon: "📅", label: "Calendario" },
+  { id: "ranking",       icon: "📊", label: "Ranking" },
+  { id: "reportes",      icon: "📋", label: "Reportes" },
+  { id: "portal",        icon: "🌐", label: "Portal público", external: true },
+  { id: "auditoria",     icon: "🔍", label: "Auditoría" },
+  { id: "configuracion", icon: "⚙",  label: "Configuración" },
+];
+
+const Sidebar = ({ active, onNavigate, organizer, tweaks }) => {
+  const accent = tweaks.accentColor || "#a3e635";
+  return (
+    <aside style={{
+      width: 220, flexShrink: 0, height: "100vh", position: "sticky", top: 0,
+      background: "oklch(14% 0.015 250)",
+      borderRight: "1px solid oklch(22% 0.01 250)",
+      display: "flex", flexDirection: "column",
+    }}>
+      {/* Logo */}
+      <div style={{ padding: "20px 20px 16px", borderBottom: "1px solid oklch(22% 0.01 250)" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+          <div style={{
+            width: 36, height: 36, borderRadius: 10,
+            background: `${accent}22`, border: `1px solid ${accent}55`,
+            display: "flex", alignItems: "center", justifyContent: "center",
+            fontSize: 18,
+          }}>🎾</div>
+          <div>
+            <div style={{ fontSize: 14, fontWeight: 700, color: "#f1f5f9", fontFamily: "Space Grotesk, sans-serif", lineHeight: 1.2 }}>PadelPro</div>
+            <div style={{ fontSize: 10, color: "#475569", fontWeight: 500 }}>v1.0 · {tweaks.role || "organizador"}</div>
+          </div>
+        </div>
+      </div>
+
+      {/* Organizer */}
+      <div style={{ padding: "14px 16px", borderBottom: "1px solid oklch(22% 0.01 250)" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 10px", borderRadius: 9, background: "oklch(18% 0.012 250)", border: "1px solid oklch(25% 0.01 250)" }}>
+          <div style={{ width: 30, height: 30, borderRadius: 7, background: `${accent}22`, border: `1px solid ${accent}44`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11, fontWeight: 800, color: accent, fontFamily: "Space Grotesk, sans-serif" }}>{organizer.avatar}</div>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ fontSize: 11, fontWeight: 600, color: "#e2e8f0", lineHeight: 1.2, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{organizer.name}</div>
+            <div style={{ fontSize: 10, color: "#475569" }}>Plan {organizer.plan}</div>
+          </div>
+          <span style={{ color: "#475569", fontSize: 12 }}>⌄</span>
+        </div>
+      </div>
+
+      {/* Nav */}
+      <nav style={{ flex: 1, padding: "12px 12px", overflowY: "auto" }}>
+        {NAV_ITEMS.map(item => {
+          const isActive = active === item.id || (active === "torneo" && item.id === "torneos");
+          return (
+            <button key={item.id} onClick={() => item.external ? window.open("Portal Publico.html", "_blank") : onNavigate(item.id)} style={{
+              display: "flex", alignItems: "center", gap: 10,
+              width: "100%", padding: "9px 12px", borderRadius: 8,
+              background: isActive ? `${accent}15` : "transparent",
+              border: `1px solid ${isActive ? `${accent}30` : "transparent"}`,
+              color: isActive ? accent : "#64748b",
+              fontFamily: "inherit", fontSize: 13, fontWeight: isActive ? 600 : 400,
+              cursor: "pointer", marginBottom: 2, textAlign: "left",
+              transition: "all 0.12s",
+            }}
+            onMouseEnter={e => { if (!isActive) { e.currentTarget.style.background = "oklch(20% 0.01 250)"; e.currentTarget.style.color = "#94a3b8"; }}}
+            onMouseLeave={e => { if (!isActive) { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = "#64748b"; }}}
+            >
+              <span style={{ fontSize: 15, width: 20, textAlign: "center", flexShrink: 0 }}>{item.icon}</span>
+              {item.label}
+            </button>
+          );
+        })}
+      </nav>
+
+      {/* Bottom */}
+      <div style={{ padding: "14px 16px", borderTop: "1px solid oklch(22% 0.01 250)" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 10px", borderRadius: 9 }}>
+          <div style={{ width: 28, height: 28, borderRadius: 7, background: "oklch(24% 0.01 250)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 12, color: "#64748b" }}>👤</div>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ fontSize: 11, fontWeight: 600, color: "#94a3b8" }}>Admin</div>
+            <div style={{ fontSize: 10, color: "#334155" }}>admin@padelclub.com</div>
+          </div>
+          <button style={{ background: "none", border: "none", color: "#475569", cursor: "pointer", fontSize: 12 }}>↪</button>
+        </div>
+      </div>
+    </aside>
+  );
+};
+
+// Placeholder views
+const PlaceholderView = ({ title }) => (
+  <div className="view-enter" style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", height: 400, gap: 16 }}>
+    <div style={{ fontSize: 48, opacity: 0.3 }}>🚧</div>
+    <h2 style={{ fontFamily: "Space Grotesk, sans-serif", color: "#475569", fontSize: 18 }}>{title}</h2>
+    <span style={{ color: "#334155", fontSize: 13 }}>Módulo disponible en próxima entrega</span>
+  </div>
+);
+
+// Main App
+function App() {
+  const [view, setView] = useState(() => localStorage.getItem("padelpro_view") || "dashboard");
+  const [selectedTorneoId, setSelectedTorneoId] = useState(null);
+  const [tweaks, setTweaks] = useState(TWEAK_DEFAULTS);
+  const [tweaksVisible, setTweaksVisible] = useState(false);
+
+  // Persist view
+  useEffect(() => { localStorage.setItem("padelpro_view", view); }, [view]);
+
+  // Tweaks messaging
+  useEffect(() => {
+    const handler = (e) => {
+      if (e.data?.type === "__activate_edit_mode") setTweaksVisible(true);
+      if (e.data?.type === "__deactivate_edit_mode") setTweaksVisible(false);
+    };
+    window.addEventListener("message", handler);
+    window.parent.postMessage({ type: "__edit_mode_available" }, "*");
+    return () => window.removeEventListener("message", handler);
+  }, []);
+
+  // Tweak controls
+  useEffect(() => {
+    const accentEl = document.getElementById("tweak-accent");
+    const densityEl = document.getElementById("tweak-density");
+    const roleEl = document.getElementById("tweak-role");
+    const panel = document.getElementById("tweaks-panel");
+
+    if (tweaksVisible) panel?.classList.add("visible");
+    else panel?.classList.remove("visible");
+
+    const onChange = () => {
+      const next = {
+        accentColor: accentEl?.value || tweaks.accentColor,
+        density: densityEl?.value || tweaks.density,
+        role: roleEl?.value || tweaks.role,
+      };
+      setTweaks(next);
+      window.parent.postMessage({ type: "__edit_mode_set_keys", edits: { accentColor: next.accentColor, density: next.density, role: next.role } }, "*");
+    };
+    accentEl?.addEventListener("change", onChange);
+    densityEl?.addEventListener("change", onChange);
+    roleEl?.addEventListener("change", onChange);
+    return () => {
+      accentEl?.removeEventListener("change", onChange);
+      densityEl?.removeEventListener("change", onChange);
+      roleEl?.removeEventListener("change", onChange);
+    };
+  }, [tweaksVisible]);
+
+  const navigate = useCallback((screen, id) => {
+    setView(screen);
+    if (id) setSelectedTorneoId(id);
+  }, []);
+
+  const selectedTorneo = MOCK_DATA.torneos.find(t => t.id === selectedTorneoId) || MOCK_DATA.torneos[0];
+
+  const accent = tweaks.accentColor || "#a3e635";
+
+  return (
+    <div style={{ display: "flex", height: "100vh", overflow: "hidden" }}>
+      <Sidebar active={view} onNavigate={navigate} organizer={MOCK_DATA.organizer} tweaks={tweaks} />
+
+      {/* Main content */}
+      <main style={{ flex: 1, overflowY: "auto", display: "flex", flexDirection: "column" }}>
+        {/* Top bar */}
+        <header style={{
+          padding: "16px 28px", borderBottom: "1px solid oklch(20% 0.01 250)",
+          display: "flex", alignItems: "center", justifyContent: "space-between",
+          position: "sticky", top: 0, zIndex: 10,
+          background: "oklch(12% 0.015 250)",
+          backdropFilter: "blur(8px)",
+        }}>
+          <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
+            {/* Breadcrumb */}
+            <span style={{ fontSize: 13, color: "#475569" }}>Copa de Verano 2026</span>
+            {view === "torneo" && <>
+              <span style={{ color: "#334155" }}>/</span>
+              <span style={{ fontSize: 13, color: "#94a3b8" }}>{selectedTorneo?.nombre}</span>
+            </>}
+          </div>
+          <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
+            <div style={{ position: "relative" }}>
+              <input placeholder="Buscar jugador, torneo..." style={{
+                padding: "8px 14px 8px 36px", background: "oklch(19% 0.012 250)",
+                border: "1px solid oklch(28% 0.01 250)", borderRadius: 8,
+                color: "#94a3b8", fontFamily: "inherit", fontSize: 12, outline: "none",
+                width: 220,
+              }} />
+              <span style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)", fontSize: 13, color: "#334155" }}>🔍</span>
+            </div>
+            <div style={{ position: "relative" }}>
+              <button style={{ width: 36, height: 36, borderRadius: 8, background: "oklch(19% 0.012 250)", border: "1px solid oklch(28% 0.01 250)", color: "#64748b", cursor: "pointer", fontSize: 16 }}>🔔</button>
+              <span style={{ position: "absolute", top: -3, right: -3, width: 16, height: 16, background: "#fbbf24", borderRadius: "50%", fontSize: 9, fontWeight: 800, color: "#0a0f0a", display: "flex", alignItems: "center", justifyContent: "center" }}>3</span>
+            </div>
+          </div>
+        </header>
+
+        {/* Content */}
+        <div className="view-enter" key={view + selectedTorneoId} style={{ padding: "24px 28px", flex: 1 }}>
+          {view === "dashboard" && <Dashboard data={MOCK_DATA} onNavigate={navigate} />}
+          {view === "torneos" && <TorneosView torneos={MOCK_DATA.torneos} onNavigate={navigate} />}
+          {view === "torneo" && (
+            <TorneoDetalle
+              torneo={selectedTorneo}
+              data={MOCK_DATA}
+              onBack={() => setView("torneos")}
+            />
+          )}
+          {view === "fixture"     && <FixtureView />}
+          {view === "calendario"  && <CalendarioView />}
+          {view === "ranking" && <RankingView ranking={MOCK_DATA.ranking} />}
+          {view === "jugadores" && <JugadoresView />}
+          {view === "reportes" && <ReportesView />}
+          {view === "auditoria"   && <AuditoriaView />}
+          {view === "configuracion" && <ConfiguracionView />}
+        </div>
+      </main>
+    </div>
+  );
+}
+
+const root = ReactDOM.createRoot(document.getElementById("root"));
+root.render(<App />);
+</script>
+</body>
+</html>
