@@ -67,7 +67,11 @@
       "PowerShell(npx vitest run 2>$null | Select-Object -Last 8)",
       "PowerShell($content = [IO.File]::ReadAllText\\(\"C:\\\\proyectos\\\\torneos-padel\\\\src\\\\modules\\\\matches\\\\engine\\\\logic.test.ts\"\\); \"líneas: \" + \\($content -split \"`n\"\\).Count)",
       "PowerShell(gh auth *)",
-      "PowerShell(git check-ignore *)"
+      "PowerShell(git check-ignore *)",
+      "PowerShell($staged = git diff --cached --name-only; \"archivos staged: $\\($staged.Count\\)\"; $staged | Where-Object { $_ -match \"^\\\\.env$\" }; if \\($staged -contains \".env\"\\) { \"PELIGRO .env staged\" } else { \".env NO staged, OK\" })",
+      "PowerShell(git commit *)",
+      "PowerShell(git push *)",
+      "PowerShell(git *)"
     ]
   }
 }
