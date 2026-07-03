@@ -9,8 +9,9 @@ La app queda en Vercel (plan Hobby) y la base de datos Postgres en Neon (free ti
 
 ## 1. Base de datos — Neon
 
-1. Crear cuenta en <https://neon.tech> (login con GitHub) y crear un proyecto
-   (región AWS `sa-east-1` São Paulo, la más cercana a Argentina).
+1. Crear cuenta en <https://neon.tech> (login con GitHub) y crear un proyecto:
+   - **Postgres version: 16** (la misma que docker-compose local)
+   - Región: AWS `sa-east-1` (São Paulo), la más cercana a Argentina.
 2. En **Connection Details** copiar DOS connection strings:
    - **Pooled** (el que dice `-pooler` en el host) → va en `DATABASE_URL`
    - **Direct** (sin `-pooler`) → va en `DIRECT_URL`
@@ -33,7 +34,7 @@ La app queda en Vercel (plan Hobby) y la base de datos Postgres en Neon (free ti
 | --- | --- |
 | `DATABASE_URL` | Connection string **pooled** de Neon |
 | `DIRECT_URL` | Connection string **direct** de Neon |
-| `AUTH_SECRET` | Generar nuevo: `openssl rand -base64 32` (NO reusar el de dev) |
+| `AUTH_SECRET` | Generar nuevo (NO reusar el de dev), en PowerShell: `node -e "console.log(require('crypto').randomBytes(32).toString('base64'))"` |
 | `NEXT_PUBLIC_APP_URL` | `https://<tu-proyecto>.vercel.app` (o tu dominio) |
 | `NEXT_PUBLIC_APP_NAME` | `PadelPro` |
 | `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` | Los de Google Cloud (ver paso 5) |
@@ -41,7 +42,7 @@ La app queda en Vercel (plan Hobby) y la base de datos Postgres en Neon (free ti
 | `EMAIL_FROM` | `PadelPro <noreply@tudominio.com>` (dominio verificado en Resend) |
 | `MP_ACCESS_TOKEN` | Access Token de Mercado Pago (TEST primero, prod después) |
 | `BILLING_TRANSFER_INFO` | Texto con datos de transferencia (opcional) |
-| `CRON_SECRET` | Generar: `openssl rand -hex 32` — sin esto los crons devuelven 401 |
+| `CRON_SECRET` | Generar: `node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"` — sin esto los crons devuelven 401 |
 
 `AUTH_URL` **no** hace falta en Vercel (next-auth detecta la URL solo).
 
