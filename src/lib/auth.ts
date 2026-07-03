@@ -5,7 +5,7 @@ import Google from "next-auth/providers/google";
 import bcrypt from "bcryptjs";
 import { z } from "zod";
 import { prisma } from "./prisma";
-import type { SystemRole } from "@prisma/client";
+import { authConfig } from "./auth.config";
 
 const credentialsSchema = z.object({
   email: z.string().email(),
@@ -17,12 +17,8 @@ const credentialsSchema = z.object({
 const DUMMY_HASH = bcrypt.hashSync("dummy-password-for-timing", 12);
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
+  ...authConfig,
   adapter: PrismaAdapter(prisma),
-  session: { strategy: "jwt" },
-  pages: {
-    signIn: "/login",
-    error: "/login",
-  },
   providers: [
     Google({
       clientId: process.env.GOOGLE_CLIENT_ID!,
@@ -54,20 +50,4 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       },
     }),
   ],
-  callbacks: {
-    jwt({ token, user }) {
-      if (user) {
-        token.id = user.id;
-        token.systemRole = (user as { systemRole: SystemRole }).systemRole;
-      }
-      return token;
-    },
-    session({ session, token }) {
-      if (token) {
-        session.user.id = token.id as string;
-        session.user.systemRole = token.systemRole as SystemRole;
-      }
-      return session;
-    },
-  },
 });

@@ -71,7 +71,8 @@
       "PowerShell($staged = git diff --cached --name-only; \"archivos staged: $\\($staged.Count\\)\"; $staged | Where-Object { $_ -match \"^\\\\.env$\" }; if \\($staged -contains \".env\"\\) { \"PELIGRO .env staged\" } else { \".env NO staged, OK\" })",
       "PowerShell(git commit *)",
       "PowerShell(git push *)",
-      "PowerShell(git *)"
+      "PowerShell(git *)",
+      "PowerShell($deadline = \\(Get-Date\\).AddSeconds\\(60\\); do { Start-Sleep -Seconds 3; try { $r = Invoke-WebRequest -Uri \"http://localhost:3000/\" -UseBasicParsing -TimeoutSec 8; break } catch {} } while \\(\\(Get-Date\\) -lt $deadline\\); \"landing: $\\($r.StatusCode\\)\"; $d = Invoke-WebRequest -Uri \"http://localhost:3000/dashboard\" -UseBasicParsing -TimeoutSec 30; \"dashboard sin sesión resuelve a: $\\($d.BaseResponse.ResponseUri\\)\"; $l = Invoke-WebRequest -Uri \"http://localhost:3000/login\" -UseBasicParsing -TimeoutSec 30; \"login: $\\($l.StatusCode\\)\")"
     ]
   }
 }
