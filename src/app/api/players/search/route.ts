@@ -13,13 +13,14 @@ export async function GET(request: Request) {
 
   const players = await searchPlayers(q, 10);
 
+  // No exponer DNI ni otros datos sensibles: solo lo necesario para
+  // identificar al jugador en el selector (nombre + email).
   return NextResponse.json(
     players.map((p) => ({
       id: p.id,
       firstName: p.firstName,
       lastName: p.lastName,
       email: p.user?.email ?? null,
-      dni: p.dni ?? null,
     }))
   );
 }

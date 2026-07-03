@@ -17,15 +17,15 @@ interface Props {
 
 const INPUT_STYLE: React.CSSProperties = {
   padding: "10px 12px", borderRadius: 8, fontSize: 13,
-  background: "oklch(20% 0.012 250)",
-  border: "1px solid oklch(30% 0.01 250)",
-  color: "var(--text-primary)",
+  background: "rgba(255,255,255,0.04)",
+  border: "1px solid rgba(255,255,255,0.1)",
+  color: "#f8fafc",
   outline: "none",
   width: "100%", boxSizing: "border-box",
 };
 
 const LABEL_STYLE: React.CSSProperties = {
-  fontSize: 12, fontWeight: 600, color: "var(--text-secondary)", marginBottom: 6, display: "block",
+  fontSize: 12, fontWeight: 600, color: "#e2e8f0", marginBottom: 6, display: "block",
 };
 
 export function PlayerProfileForm({ initialData }: Props) {
@@ -107,7 +107,7 @@ export function PlayerProfileForm({ initialData }: Props) {
           disabled={isPending}
           style={{
             padding: "10px 22px", borderRadius: 8, fontSize: 13, fontWeight: 700,
-            background: "var(--accent)", color: "#000", border: "none",
+            background: "#a3e635", color: "#000", border: "none",
             cursor: isPending ? "not-allowed" : "pointer",
             opacity: isPending ? 0.7 : 1,
             display: "flex", alignItems: "center", gap: 8,

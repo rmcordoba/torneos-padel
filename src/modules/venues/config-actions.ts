@@ -3,7 +3,8 @@
 import { revalidatePath } from "next/cache";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { getOrganizersByUser } from "@/modules/organizers/queries";
+import { getActiveMembership } from "@/lib/active-organizer";
+import { requireWritable } from "@/lib/permissions";
 import { venueSchema, courtSchema } from "./validations";
 
 export type VenueConfigState = { error?: string; fieldErrors?: Record<string, string[]> } | null;
@@ -11,8 +12,10 @@ export type VenueConfigState = { error?: string; fieldErrors?: Record<string, st
 const PATH = "/dashboard/configuracion";
 
 async function getOrganizerId(userId: string): Promise<string | null> {
-  const m = await getOrganizersByUser(userId);
-  return m[0]?.organizerId ?? null;
+  const membership = await getActiveMembership(userId);
+  const organizerId = membership?.organizerId ?? null;
+  if (organizerId) await requireWritable(organizerId);
+  return organizerId;
 }
 
 export async function createVenueConfig(

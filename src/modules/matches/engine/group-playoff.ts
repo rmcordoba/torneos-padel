@@ -1,9 +1,13 @@
 import { prisma } from "@/lib/prisma";
 import type { FormatEngine } from "./types";
 import { SingleEliminationEngine } from "./single-elimination";
+import { computeGroupStandings, distributeIntoGroups, distributeIntoNumGroups, rankClassified, type GroupMatchData } from "./logic";
 
 interface GroupConfig {
+  /** Tamaño objetivo de grupo; la cantidad de grupos se deriva (modo clásico). */
   groupSize?: number;
+  /** Cantidad EXACTA de grupos; el tamaño se deriva balanceado ±1. Tiene prioridad sobre groupSize. */
+  numGroups?: number;
   teamsAdvancePerGroup?: number;
 }
 
@@ -18,8 +22,10 @@ export class GroupPlayoffEngine implements FormatEngine {
       where: { id: tournamentCategoryId },
     });
     const config = (tc.formatConfig ?? {}) as GroupConfig;
-    const groupSize = config.groupSize ?? 4;
-    const numGroups = Math.ceil(teamIds.length / groupSize);
+    const groupDistribution = config.numGroups
+      ? distributeIntoNumGroups(teamIds, config.numGroups)
+      : distributeIntoGroups(teamIds, config.groupSize ?? 4);
+    const numGroups = groupDistribution.length;
 
     const stageId = await prisma.$transaction(async (tx) => {
       const stage = await tx.stage.create({
@@ -43,10 +49,7 @@ export class GroupPlayoffEngine implements FormatEngine {
         });
 
         // Teams for this group (interleaved distribution for balance)
-        const groupTeams: string[] = [];
-        for (let i = g; i < teamIds.length; i += numGroups) {
-          groupTeams.push(teamIds[i]);
-        }
+        const groupTeams = groupDistribution[g];
 
         // Initialize standings for each team in the group
         await tx.groupStanding.createMany({
@@ -124,71 +127,34 @@ export class GroupPlayoffEngine implements FormatEngine {
       include: { teams: true, sets: true, result: true },
     });
 
-    const stats: Record<string, {
-      played: number; won: number; lost: number;
-      sw: number; sl: number; gw: number; gl: number; pts: number;
-    }> = {};
-
-    const ensure = (id: string) => {
-      if (!stats[id]) stats[id] = { played: 0, won: 0, lost: 0, sw: 0, sl: 0, gw: 0, gl: 0, pts: 0 };
-    };
-
+    const matchData: GroupMatchData[] = [];
     for (const match of matches) {
       const t1 = match.teams.find((t) => t.side === 1);
       const t2 = match.teams.find((t) => t.side === 2);
       if (!t1 || !t2) continue;
-
-      ensure(t1.teamId);
-      ensure(t2.teamId);
-
-      stats[t1.teamId].played++;
-      stats[t2.teamId].played++;
-
-      for (const set of match.sets) {
-        stats[t1.teamId].gw += set.games1;
-        stats[t1.teamId].gl += set.games2;
-        stats[t2.teamId].gw += set.games2;
-        stats[t2.teamId].gl += set.games1;
-
-        if (set.games1 > set.games2) {
-          stats[t1.teamId].sw++;
-          stats[t2.teamId].sl++;
-        } else if (set.games2 > set.games1) {
-          stats[t2.teamId].sw++;
-          stats[t1.teamId].sl++;
-        }
-      }
-
-      if (match.result?.winnerId === t1.teamId) {
-        stats[t1.teamId].won++;
-        stats[t1.teamId].pts += 2;
-        stats[t2.teamId].lost++;
-      } else if (match.result?.winnerId === t2.teamId) {
-        stats[t2.teamId].won++;
-        stats[t2.teamId].pts += 2;
-        stats[t1.teamId].lost++;
-      }
+      matchData.push({
+        side1TeamId: t1.teamId,
+        side2TeamId: t2.teamId,
+        winnerId: match.result?.winnerId ?? null,
+        sets: match.sets,
+      });
     }
 
-    const sorted = Object.entries(stats).sort(([, a], [, b]) => {
-      if (b.pts !== a.pts) return b.pts - a.pts;
-      if (b.sw - b.sl !== a.sw - a.sl) return (b.sw - b.sl) - (a.sw - a.sl);
-      return (b.gw - b.gl) - (a.gw - a.gl);
-    });
+    const sorted = computeGroupStandings(matchData);
 
     for (let i = 0; i < sorted.length; i++) {
-      const [teamId, s] = sorted[i];
+      const s = sorted[i];
       await prisma.groupStanding.upsert({
-        where: { groupId_teamId: { groupId, teamId } },
+        where: { groupId_teamId: { groupId, teamId: s.teamId } },
         update: {
           position: i + 1,
           matchesPlayed: s.played, matchesWon: s.won, matchesLost: s.lost,
-          setsWon: s.sw, setsLost: s.sl, gamesWon: s.gw, gamesLost: s.gl, points: s.pts,
+          setsWon: s.setsWon, setsLost: s.setsLost, gamesWon: s.gamesWon, gamesLost: s.gamesLost, points: s.points,
         },
         create: {
-          groupId, teamId, position: i + 1,
+          groupId, teamId: s.teamId, position: i + 1,
           matchesPlayed: s.played, matchesWon: s.won, matchesLost: s.lost,
-          setsWon: s.sw, setsLost: s.sl, gamesWon: s.gw, gamesLost: s.gl, points: s.pts,
+          setsWon: s.setsWon, setsLost: s.setsLost, gamesWon: s.gamesWon, gamesLost: s.gamesLost, points: s.points,
         },
       });
     }
@@ -210,14 +176,24 @@ export class GroupPlayoffEngine implements FormatEngine {
     const config = (groupStage.tournamentCategory.formatConfig ?? {}) as GroupConfig;
     const teamsAdvancePerGroup = config.teamsAdvancePerGroup ?? 2;
 
-    // Collect classified teams: top N from each group, interleaved for balanced bracket
-    const classified: string[] = [];
-    for (let slot = 0; slot < teamsAdvancePerGroup; slot++) {
-      for (const group of groupStage.groups) {
-        const standing = group.standings[slot];
-        if (standing) classified.push(standing.teamId);
-      }
-    }
+    // Clasificados ordenados por mérito (1ros primero, desempeño promedio como
+    // desempate): el orden es la siembra del playoff, así los byes del cuadro
+    // les tocan a los mejores.
+    const classified = rankClassified(
+      groupStage.groups.flatMap((g) =>
+        g.standings.map((s) => ({
+          teamId: s.teamId,
+          position: s.position,
+          points: s.points,
+          matchesPlayed: s.matchesPlayed,
+          setsWon: s.setsWon,
+          setsLost: s.setsLost,
+          gamesWon: s.gamesWon,
+          gamesLost: s.gamesLost,
+        }))
+      ),
+      teamsAdvancePerGroup
+    );
 
     // Find the playoff stage
     const playoffStage = await prisma.stage.findFirst({

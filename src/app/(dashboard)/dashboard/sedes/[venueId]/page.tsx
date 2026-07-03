@@ -1,7 +1,7 @@
 import { notFound, redirect } from "next/navigation";
 import Link from "next/link";
 import { auth } from "@/lib/auth";
-import { getOrganizersByUser } from "@/modules/organizers/queries";
+import { getActiveMembership } from "@/lib/active-organizer";
 import { getVenueById } from "@/modules/venues/queries";
 import { CourtManager } from "../_components/court-manager";
 import { DeleteVenueButton } from "../_components/delete-venue-button";
@@ -19,10 +19,10 @@ export default async function VenueDetailPage({
   const session = await auth();
   if (!session?.user) redirect("/login");
 
-  const memberships = await getOrganizersByUser(session.user.id);
-  if (!memberships.length) redirect("/dashboard");
+  const membership = await getActiveMembership(session.user.id);
+  if (!membership) redirect("/dashboard");
 
-  const organizerId = memberships[0].organizerId;
+  const organizerId = membership.organizerId;
   const venue = await getVenueById(venueId, organizerId);
   if (!venue) notFound();
 
@@ -45,7 +45,7 @@ export default async function VenueDetailPage({
               <Building2 size={22} color="var(--accent)" />
             </div>
             <div>
-              <h1 style={{ fontSize: 18, fontWeight: 700, color: "var(--text-primary)", fontFamily: "Space Grotesk, sans-serif" }}>{venue.name}</h1>
+              <h1 style={{ fontSize: 18, fontWeight: 700, color: "var(--text-primary)", fontFamily: "var(--font-space), sans-serif" }}>{venue.name}</h1>
               {venue.city && (
                 <p style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12, color: "var(--text-dimmer)", marginTop: 6 }}>
                   <MapPin size={13} color="var(--text-darkest)" />
@@ -80,7 +80,7 @@ export default async function VenueDetailPage({
 
       {/* Courts */}
       <div>
-        <h2 style={{ fontSize: 14, fontWeight: 700, color: "var(--text-primary)", marginBottom: 12, display: "flex", alignItems: "center", gap: 8, fontFamily: "Space Grotesk, sans-serif" }}>
+        <h2 style={{ fontSize: 14, fontWeight: 700, color: "var(--text-primary)", marginBottom: 12, display: "flex", alignItems: "center", gap: 8, fontFamily: "var(--font-space), sans-serif" }}>
           <Layers size={15} color="var(--accent)" /> Canchas
         </h2>
         <CourtManager venueId={venue.id} courts={venue.courts} />

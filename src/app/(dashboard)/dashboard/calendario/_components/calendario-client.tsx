@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { AssignScheduleModal } from "./assign-schedule-modal";
 import type { getVenuesWithCourts, getUnscheduledMatches } from "@/modules/scheduling/queries";
@@ -85,6 +85,10 @@ export function CalendarioClient({ slots, unscheduled, venues, initialYear, init
   const router = useRouter();
   const [selectedDay, setSelectedDay] = useState<number>(initialDay);
   const [filterCat,   setFilterCat]   = useState("todas");
+  const unscheduledRef = useRef<HTMLDivElement>(null);
+
+  const scrollToUnscheduled = () =>
+    unscheduledRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
 
   const currentYear  = initialYear;
   const currentMonth = initialMonth;
@@ -174,14 +178,14 @@ export function CalendarioClient({ slots, unscheduled, venues, initialYear, init
       {/* Header */}
       <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", flexWrap: "wrap", gap: 12 }}>
         <div>
-          <h1 style={{ fontFamily: "Space Grotesk, sans-serif", fontSize: 22, fontWeight: 700, color: "var(--text-primary)", marginBottom: 4 }}>
-            Calendario de partidos
+          <h1 style={{ fontFamily: "var(--font-space), sans-serif", fontSize: 28, fontWeight: 900, color: "#f8fafc", letterSpacing: "-0.02em", marginBottom: 4 }}>
+            Calendario
           </h1>
-          <p style={{ fontSize: 13, color: "var(--text-faint)" }}>
+          <p style={{ fontSize: 13, color: "#64748b" }}>
             {MONTHS[currentMonth - 1]} {currentYear}
           </p>
         </div>
-        <button style={{ padding: "9px 18px", borderRadius: 9, background: "var(--accent)", border: "none", color: "#0f172a", fontFamily: "inherit", fontSize: 13, fontWeight: 700, cursor: "pointer" }}>
+        <button onClick={scrollToUnscheduled} style={{ padding: "9px 18px", borderRadius: 9, background: "#a3e635", border: "none", color: "#080e1a", fontFamily: "inherit", fontSize: 13, fontWeight: 800, boxShadow: "0 0 20px rgba(163,230,53,0.3)", cursor: "pointer" }}>
           + Agendar partido
         </button>
       </div>
@@ -196,7 +200,7 @@ export function CalendarioClient({ slots, unscheduled, venues, initialYear, init
         ))}
         {categories.length > 0 && (
           <>
-            <span style={{ width: 1, height: 16, background: "var(--border-subtle)", margin: "0 4px" }} />
+            <span style={{ width: 1, height: 16, background: "rgba(255,255,255,0.06)", margin: "0 4px" }} />
             {["todas", ...categories].map((c) => {
               const active = filterCat === c;
               const col    = c === "todas" ? "#a3e635" : catColor(c);
@@ -204,9 +208,9 @@ export function CalendarioClient({ slots, unscheduled, venues, initialYear, init
                 <button key={c} onClick={() => setFilterCat(c)} style={{
                   display: "flex", alignItems: "center", gap: 5,
                   padding: "5px 11px", borderRadius: 20,
-                  border: `1px solid ${active ? col + "55" : "var(--border-default)"}`,
+                  border: `1px solid ${active ? col + "55" : "rgba(255,255,255,0.07)"}`,
                   background: active ? col + "18" : "transparent",
-                  color: active ? col : "var(--text-faint)",
+                  color: active ? col : "#64748b",
                   fontFamily: "inherit", fontSize: 11, fontWeight: 600, cursor: "pointer",
                 }}>
                   {c !== "todas" && <span style={{ width: 6, height: 6, borderRadius: "50%", background: catColor(c), flexShrink: 0 }} />}
@@ -222,23 +226,23 @@ export function CalendarioClient({ slots, unscheduled, venues, initialYear, init
       <div style={{ display: "grid", gridTemplateColumns: "1fr 270px", gap: 16, alignItems: "start" }}>
 
         {/* Calendar grid */}
-        <div style={{ background: "oklch(16% 0.012 250)", borderRadius: 14, border: "1px solid var(--border-default)", overflow: "hidden" }}>
-          <div style={{ padding: "16px 20px", borderBottom: "1px solid var(--border-subtle)", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-            <button onClick={prevMonth} style={{ width: 32, height: 32, borderRadius: 8, background: "oklch(22% 0.012 250)", border: "1px solid var(--border-default)", color: "var(--text-faint)", cursor: "pointer", fontSize: 16, display: "flex", alignItems: "center", justifyContent: "center" }}>‹</button>
+        <div style={{ background: "rgba(10,18,38,0.7)", borderRadius: 14, border: "1px solid rgba(255,255,255,0.07)", overflow: "hidden" }}>
+          <div style={{ padding: "16px 20px", borderBottom: "1px solid rgba(255,255,255,0.06)", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+            <button onClick={prevMonth} style={{ width: 32, height: 32, borderRadius: 8, background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.07)", color: "#64748b", cursor: "pointer", fontSize: 16, display: "flex", alignItems: "center", justifyContent: "center" }}>‹</button>
             <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-              <span style={{ fontFamily: "Space Grotesk, sans-serif", fontSize: 16, fontWeight: 700, color: "var(--text-primary)" }}>
+              <span style={{ fontFamily: "var(--font-space), sans-serif", fontSize: 16, fontWeight: 700, color: "#f8fafc" }}>
                 {MONTHS[currentMonth - 1]} {currentYear}
               </span>
-              <button onClick={goToday} style={{ padding: "3px 10px", borderRadius: 6, background: "oklch(22% 0.012 250)", border: "1px solid var(--border-default)", color: "var(--text-faint)", cursor: "pointer", fontSize: 11, fontWeight: 600, fontFamily: "inherit" }}>
+              <button onClick={goToday} style={{ padding: "3px 10px", borderRadius: 6, background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.07)", color: "#64748b", cursor: "pointer", fontSize: 11, fontWeight: 600, fontFamily: "inherit" }}>
                 Hoy
               </button>
             </div>
-            <button onClick={nextMonth} style={{ width: 32, height: 32, borderRadius: 8, background: "oklch(22% 0.012 250)", border: "1px solid var(--border-default)", color: "var(--text-faint)", cursor: "pointer", fontSize: 16, display: "flex", alignItems: "center", justifyContent: "center" }}>›</button>
+            <button onClick={nextMonth} style={{ width: 32, height: 32, borderRadius: 8, background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.07)", color: "#64748b", cursor: "pointer", fontSize: 16, display: "flex", alignItems: "center", justifyContent: "center" }}>›</button>
           </div>
 
           <div style={{ display: "grid", gridTemplateColumns: "repeat(7,1fr)", padding: "10px 14px 6px" }}>
             {DAYS_ABBR.map((d) => (
-              <div key={d} style={{ textAlign: "center", fontSize: 10, fontWeight: 700, color: "var(--text-darkest)", textTransform: "uppercase", letterSpacing: "0.07em" }}>{d}</div>
+              <div key={d} style={{ textAlign: "center", fontSize: 10, fontWeight: 700, color: "#334155", textTransform: "uppercase", letterSpacing: "0.07em" }}>{d}</div>
             ))}
           </div>
 
@@ -257,15 +261,15 @@ export function CalendarioClient({ slots, unscheduled, venues, initialYear, init
                 <button key={day} onClick={() => setSelectedDay(day)} style={{
                   position: "relative", padding: "8px 4px 6px", borderRadius: 9, minHeight: 62,
                   border: `1px solid ${isSel ? "rgba(163,230,53,.5)" : isTdy ? "rgba(163,230,53,.25)" : "transparent"}`,
-                  background: isSel ? "rgba(163,230,53,.15)" : isTdy ? "rgba(163,230,53,.06)" : hasMtch ? (isPast ? "oklch(18% 0.008 250)" : "oklch(20% 0.012 250)") : "transparent",
+                  background: isSel ? "rgba(163,230,53,.15)" : isTdy ? "rgba(163,230,53,.06)" : hasMtch ? (isPast ? "rgba(255,255,255,0.03)" : "rgba(255,255,255,0.04)") : "transparent",
                   cursor: "pointer", display: "flex", flexDirection: "column", alignItems: "center", gap: 3,
                   transition: "all .1s", fontFamily: "inherit",
                   opacity: isPast && !hasMtch ? 0.45 : 1,
                 }}>
                   <span style={{
                     fontSize: 13, fontWeight: isSel || isTdy ? 800 : 400,
-                    color: isSel || isTdy ? "#a3e635" : isPast ? "var(--text-darkest)" : "var(--text-muted)",
-                    fontFamily: "Space Grotesk, sans-serif",
+                    color: isSel || isTdy ? "#a3e635" : isPast ? "#334155" : "#94a3b8",
+                    fontFamily: "var(--font-space), sans-serif",
                     width: 24, height: 24, display: "flex", alignItems: "center", justifyContent: "center",
                     borderRadius: "50%",
                     background: isTdy && !isSel ? "rgba(163,230,53,.2)" : "transparent",
@@ -283,7 +287,7 @@ export function CalendarioClient({ slots, unscheduled, venues, initialYear, init
                     </div>
                   )}
                   {hasMtch && (
-                    <span style={{ fontSize: 9, fontWeight: 700, color: "var(--text-darkest)" }}>
+                    <span style={{ fontSize: 9, fontWeight: 700, color: "#334155" }}>
                       {dots.reduce((a, d) => a + d.count, 0)}p
                     </span>
                   )}
@@ -297,9 +301,9 @@ export function CalendarioClient({ slots, unscheduled, venues, initialYear, init
         <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
 
           {/* Day summary */}
-          <div style={{ background: "oklch(16% 0.012 250)", borderRadius: 14, border: "1px solid var(--border-default)", overflow: "hidden" }}>
-            <div style={{ padding: "14px 16px", borderBottom: "1px solid var(--border-subtle)" }}>
-              <div style={{ fontFamily: "Space Grotesk, sans-serif", fontWeight: 700, fontSize: 14, color: "var(--text-primary)", marginBottom: 6 }}>
+          <div style={{ background: "rgba(10,18,38,0.7)", borderRadius: 14, border: "1px solid rgba(255,255,255,0.07)", overflow: "hidden" }}>
+            <div style={{ padding: "14px 16px", borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
+              <div style={{ fontFamily: "var(--font-space), sans-serif", fontWeight: 700, fontSize: 14, color: "#f8fafc", marginBottom: 6 }}>
                 {selectedDayLabel}
               </div>
               {daySlots.length > 0 ? (
@@ -316,12 +320,12 @@ export function CalendarioClient({ slots, unscheduled, venues, initialYear, init
                   })}
                 </div>
               ) : (
-                <div style={{ fontSize: 12, color: "var(--text-faint)" }}>Sin partidos</div>
+                <div style={{ fontSize: 12, color: "#64748b" }}>Sin partidos</div>
               )}
             </div>
             {selectedDay && (
               <div style={{ padding: "10px 12px" }}>
-                <button style={{ width: "100%", padding: "9px", borderRadius: 9, background: "rgba(163,230,53,.12)", border: "1px solid rgba(163,230,53,.25)", color: "#a3e635", fontFamily: "inherit", fontSize: 12, fontWeight: 700, cursor: "pointer" }}>
+                <button onClick={scrollToUnscheduled} style={{ width: "100%", padding: "9px", borderRadius: 9, background: "rgba(163,230,53,.12)", border: "1px solid rgba(163,230,53,.25)", color: "#a3e635", fontFamily: "inherit", fontSize: 12, fontWeight: 700, cursor: "pointer" }}>
                   + Agendar en este día
                 </button>
               </div>
@@ -330,9 +334,9 @@ export function CalendarioClient({ slots, unscheduled, venues, initialYear, init
 
           {/* Unscheduled */}
           {unscheduled.length > 0 && (
-            <div style={{ background: "oklch(16% 0.012 250)", borderRadius: 14, border: "1px solid var(--border-default)", overflow: "hidden" }}>
-              <div style={{ padding: "12px 16px", borderBottom: "1px solid var(--border-subtle)", display: "flex", alignItems: "center", gap: 8 }}>
-                <span style={{ fontFamily: "Space Grotesk, sans-serif", fontSize: 13, fontWeight: 700, color: "var(--text-primary)" }}>Sin horario</span>
+            <div ref={unscheduledRef} style={{ background: "rgba(10,18,38,0.7)", borderRadius: 14, border: "1px solid rgba(255,255,255,0.07)", overflow: "hidden" }}>
+              <div style={{ padding: "12px 16px", borderBottom: "1px solid rgba(255,255,255,0.06)", display: "flex", alignItems: "center", gap: 8 }}>
+                <span style={{ fontFamily: "var(--font-space), sans-serif", fontSize: 13, fontWeight: 700, color: "#f8fafc" }}>Sin horario</span>
                 <span style={{ marginLeft: "auto", minWidth: 20, height: 20, borderRadius: 10, background: "#fbbf24", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 10, fontWeight: 800, color: "#0f172a", padding: "0 6px" }}>
                   {unscheduled.length}
                 </span>
@@ -344,11 +348,11 @@ export function CalendarioClient({ slots, unscheduled, venues, initialYear, init
                     mt.team.players.map((p) => p.playerProfile.lastName).join("/")
                   );
                   return (
-                    <div key={match.id} style={{ padding: "10px 14px", borderBottom: "1px solid oklch(20% 0.01 250)" }}>
-                      <div style={{ fontSize: 12, fontWeight: 600, color: "var(--text-secondary)", marginBottom: 2 }}>
+                    <div key={match.id} style={{ padding: "10px 14px", borderBottom: "1px solid rgba(255,255,255,0.05)" }}>
+                      <div style={{ fontSize: 12, fontWeight: 600, color: "#e2e8f0", marginBottom: 2 }}>
                         {names[0] ?? "TBD"} vs {names[1] ?? "TBD"}
                       </div>
-                      <div style={{ fontSize: 11, color: "var(--text-faint)", marginBottom: 6 }}>
+                      <div style={{ fontSize: 11, color: "#64748b", marginBottom: 6 }}>
                         {tc.tournament.name} · {tc.category.name}
                       </div>
                       <AssignScheduleModal match={match} venues={venues} selectedDate={selectedDateStr} />
@@ -362,7 +366,7 @@ export function CalendarioClient({ slots, unscheduled, venues, initialYear, init
       </div>
 
       {/* Week strip */}
-      <div style={{ background: "oklch(16% 0.012 250)", borderRadius: 14, border: "1px solid var(--border-default)", overflow: "hidden" }}>
+      <div style={{ background: "rgba(10,18,38,0.7)", borderRadius: 14, border: "1px solid rgba(255,255,255,0.07)", overflow: "hidden" }}>
         <div style={{ display: "grid", gridTemplateColumns: "repeat(7,1fr)" }}>
           {weekDays.map(({ label, day, month, year, sameMonth }, i) => {
             const dsf      = sameMonth ? (slotsByDay[day] ?? []).filter((s) => filterCat === "todas" || s.category === filterCat) : [];
@@ -385,21 +389,21 @@ export function CalendarioClient({ slots, unscheduled, venues, initialYear, init
                 onClick={() => { if (sameMonth) setSelectedDay(day); else goMonth(year, month, day); }}
                 style={{
                   padding: "12px 8px", border: "none",
-                  borderRight: i < 6 ? "1px solid oklch(22% 0.01 250)" : "none",
+                  borderRight: i < 6 ? "1px solid rgba(255,255,255,0.05)" : "none",
                   background: isActive ? "rgba(163,230,53,.1)" : isTdyW ? "rgba(163,230,53,.04)" : "transparent",
                   cursor: "pointer", display: "flex", flexDirection: "column", alignItems: "center", gap: 4,
                   transition: "background .12s", fontFamily: "inherit",
                   opacity: isPastW && dsf.length === 0 ? 0.4 : 1,
                 }}
               >
-                <span style={{ fontSize: 10, fontWeight: 700, color: isTdyW ? "#a3e635" : isPastW ? "var(--text-darkest)" : "var(--text-faint)", textTransform: "uppercase", letterSpacing: "0.06em" }}>
+                <span style={{ fontSize: 10, fontWeight: 700, color: isTdyW ? "#a3e635" : isPastW ? "#334155" : "#64748b", textTransform: "uppercase", letterSpacing: "0.06em" }}>
                   {label} {day}
                 </span>
                 {isTdyW && <span style={{ fontSize: 8, padding: "1px 5px", borderRadius: 10, background: "rgba(163,230,53,.2)", color: "#a3e635", fontWeight: 800 }}>HOY</span>}
-                <span style={{ fontSize: 20, fontWeight: 800, color: isActive ? "#a3e635" : isPastW ? "var(--text-darkest)" : "var(--text-faint)", fontFamily: "Space Grotesk, sans-serif" }}>
+                <span style={{ fontSize: 20, fontWeight: 800, color: isActive ? "#a3e635" : isPastW ? "#334155" : "#64748b", fontFamily: "var(--font-space), sans-serif" }}>
                   {dsf.length}
                 </span>
-                <span style={{ fontSize: 10, color: "var(--text-darkest)" }}>partido{dsf.length !== 1 ? "s" : ""}</span>
+                <span style={{ fontSize: 10, color: "#334155" }}>partido{dsf.length !== 1 ? "s" : ""}</span>
                 {wDots.length > 0 && (
                   <div style={{ display: "flex", gap: 3, flexWrap: "wrap", justifyContent: "center" }}>
                     {wDots.map(({ color, count }) => (
@@ -417,16 +421,16 @@ export function CalendarioClient({ slots, unscheduled, venues, initialYear, init
       </div>
 
       {/* ── Agenda del día — tabla completa ── */}
-      <div style={{ background: "oklch(16% 0.012 250)", borderRadius: 14, border: "1px solid var(--border-default)", overflow: "hidden" }}>
+      <div style={{ background: "rgba(10,18,38,0.7)", borderRadius: 14, border: "1px solid rgba(255,255,255,0.07)", overflow: "hidden" }}>
 
         {/* Section header */}
-        <div style={{ padding: "14px 20px", borderBottom: "1px solid var(--border-subtle)", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+        <div style={{ padding: "14px 20px", borderBottom: "1px solid rgba(255,255,255,0.06)", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
           <div>
-            <span style={{ fontFamily: "Space Grotesk, sans-serif", fontWeight: 700, fontSize: 15, color: "var(--text-primary)" }}>
+            <span style={{ fontFamily: "var(--font-space), sans-serif", fontWeight: 700, fontSize: 15, color: "#f8fafc" }}>
               Agenda · {selectedDayLabel}
             </span>
             {daySlots.length > 0 && (
-              <span style={{ marginLeft: 10, fontSize: 12, color: "var(--text-dimmer)" }}>
+              <span style={{ marginLeft: 10, fontSize: 12, color: "#475569" }}>
                 {daySlots.length} partido{daySlots.length !== 1 ? "s" : ""}
               </span>
             )}
@@ -449,16 +453,16 @@ export function CalendarioClient({ slots, unscheduled, venues, initialYear, init
         {daySlots.length === 0 ? (
           <div style={{ padding: "48px 20px", textAlign: "center" }}>
             <div style={{ fontSize: 32, marginBottom: 10, opacity: .35 }}>📅</div>
-            <div style={{ fontSize: 14, color: "var(--text-dimmer)" }}>
+            <div style={{ fontSize: 14, color: "#475569" }}>
               {selectedDay ? "Sin partidos este día" : "Seleccioná un día del calendario"}
             </div>
           </div>
         ) : (
           <>
             {/* Table header */}
-            <div style={{ display: "grid", gridTemplateColumns: "80px 160px 1fr 150px 160px", gap: 12, padding: "8px 20px", borderBottom: "1px solid var(--border-subtle)" }}>
+            <div style={{ display: "grid", gridTemplateColumns: "80px 160px 1fr 150px 160px", gap: 12, padding: "8px 20px", borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
               {["Hora","Cancha","Partido","Categoría","Estado"].map((h) => (
-                <span key={h} style={{ fontSize: 11, fontWeight: 700, color: "var(--text-darkest)", textTransform: "uppercase", letterSpacing: "0.07em" }}>{h}</span>
+                <span key={h} style={{ fontSize: 11, fontWeight: 700, color: "#334155", textTransform: "uppercase", letterSpacing: "0.07em" }}>{h}</span>
               ))}
             </div>
 
@@ -478,32 +482,32 @@ export function CalendarioClient({ slots, unscheduled, venues, initialYear, init
                   style={{
                     display: "grid", gridTemplateColumns: "80px 160px 1fr 150px 160px",
                     gap: 12, padding: "14px 20px", alignItems: "center",
-                    background: isLive ? `${tc}08` : isPlayed ? "oklch(17% 0.007 250)" : "transparent",
+                    background: isLive ? `${tc}08` : isPlayed ? "rgba(255,255,255,0.02)" : "transparent",
                     borderLeft: `3px solid ${tc}`,
-                    borderBottom: i < daySlots.length - 1 ? "1px solid oklch(20% 0.01 250)" : "none",
+                    borderBottom: i < daySlots.length - 1 ? "1px solid rgba(255,255,255,0.05)" : "none",
                     opacity: isPlayed ? 0.72 : 1,
                     transition: "background .15s",
                   }}
                   onMouseEnter={(e) => { if (!isPlayed) e.currentTarget.style.background = `${tc}06`; }}
-                  onMouseLeave={(e) => { e.currentTarget.style.background = isLive ? `${tc}08` : isPlayed ? "oklch(17% 0.007 250)" : "transparent"; }}
+                  onMouseLeave={(e) => { e.currentTarget.style.background = isLive ? `${tc}08` : isPlayed ? "rgba(255,255,255,0.02)" : "transparent"; }}
                 >
                   {/* Hora */}
-                  <span style={{ fontSize: 16, fontWeight: 800, color: isLive ? tc : isPlayed ? "var(--text-faint)" : "var(--text-primary)", fontFamily: "Space Grotesk, sans-serif" }}>
+                  <span style={{ fontSize: 16, fontWeight: 800, color: isLive ? tc : isPlayed ? "#64748b" : "#f8fafc", fontFamily: "var(--font-space), sans-serif" }}>
                     {s.startTime}
                   </span>
 
                   {/* Cancha */}
                   <div>
-                    <div style={{ fontSize: 12, fontWeight: 600, color: isPlayed ? "var(--text-faint)" : "var(--text-secondary)" }}>
+                    <div style={{ fontSize: 12, fontWeight: 600, color: isPlayed ? "#64748b" : "#e2e8f0" }}>
                       {s.courtName ?? s.venueName}
                     </div>
                     {s.courtName && (
-                      <div style={{ fontSize: 11, color: "var(--text-faint)" }}>{s.venueName}</div>
+                      <div style={{ fontSize: 11, color: "#64748b" }}>{s.venueName}</div>
                     )}
                   </div>
 
                   {/* Partido */}
-                  <span style={{ fontSize: 13, fontWeight: 600, color: isPlayed ? "var(--text-faint)" : "var(--text-secondary)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                  <span style={{ fontSize: 13, fontWeight: 600, color: isPlayed ? "#64748b" : "#e2e8f0", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                     {s.matchLabel}
                   </span>
 

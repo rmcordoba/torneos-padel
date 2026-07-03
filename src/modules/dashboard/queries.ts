@@ -1,10 +1,16 @@
 import { prisma } from "@/lib/prisma";
 
 export async function getDashboardStats(organizerId: string) {
+  const todayStart = new Date();
+  todayStart.setUTCHours(0, 0, 0, 0);
+  const todayEnd = new Date();
+  todayEnd.setUTCHours(23, 59, 59, 999);
+
   const [
     totalTournaments,
     activeTournaments,
     pendingRegistrations,
+    pendingRegistrationsToday,
     totalPlayers,
     pendingMatches,
   ] = await Promise.all([
@@ -18,6 +24,13 @@ export async function getDashboardStats(organizerId: string) {
     prisma.registration.count({
       where: {
         status: "PENDING",
+        tournamentCategory: { tournament: { organizerId } },
+      },
+    }),
+    prisma.registration.count({
+      where: {
+        status: "PENDING",
+        createdAt: { gte: todayStart, lte: todayEnd },
         tournamentCategory: { tournament: { organizerId } },
       },
     }),
@@ -50,6 +63,7 @@ export async function getDashboardStats(organizerId: string) {
     totalTournaments,
     activeTournaments,
     pendingRegistrations,
+    pendingRegistrationsToday,
     totalPlayers,
     pendingMatches,
   };

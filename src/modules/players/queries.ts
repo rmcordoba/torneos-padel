@@ -31,23 +31,22 @@ export async function getPlayerProfileForEdit(playerId: string) {
   });
 }
 
-/** Players who have registered in at least one tournament of this organizer */
-export async function getPlayersByOrganizer(
+const PLAYER_ORG_PAGE_SIZE = 10;
+
+/** Lean scoped search for the dashboard global search dropdown */
+export async function searchPlayersByOrganizer(
   organizerId: string,
-  search?: string
+  query: string,
+  limit = 6
 ) {
   return prisma.playerProfile.findMany({
     where: {
-      ...(search
-        ? {
-            OR: [
-              { firstName: { contains: search, mode: "insensitive" } },
-              { lastName: { contains: search, mode: "insensitive" } },
-              { dni: { contains: search, mode: "insensitive" } },
-              { user: { email: { contains: search, mode: "insensitive" } } },
-            ],
-          }
-        : {}),
+      OR: [
+        { firstName: { contains: query, mode: "insensitive" } },
+        { lastName: { contains: query, mode: "insensitive" } },
+        { dni: { contains: query, mode: "insensitive" } },
+        { user: { email: { contains: query, mode: "insensitive" } } },
+      ],
       teamPlayers: {
         some: {
           team: {
@@ -62,13 +61,66 @@ export async function getPlayersByOrganizer(
         },
       },
     },
-    include: {
+    select: {
+      id: true,
+      firstName: true,
+      lastName: true,
       user: { select: { email: true } },
-      _count: { select: { teamPlayers: true } },
     },
     orderBy: [{ lastName: "asc" }, { firstName: "asc" }],
-    take: 60,
+    take: limit,
   });
+}
+
+/** Players who have registered in at least one tournament of this organizer */
+export async function getPlayersByOrganizer(
+  organizerId: string,
+  search?: string,
+  page = 1
+) {
+  const skip = (page - 1) * PLAYER_ORG_PAGE_SIZE;
+
+  const where = {
+    ...(search
+      ? {
+          OR: [
+            { firstName: { contains: search, mode: "insensitive" as const } },
+            { lastName: { contains: search, mode: "insensitive" as const } },
+            { dni: { contains: search, mode: "insensitive" as const } },
+            { user: { email: { contains: search, mode: "insensitive" as const } } },
+          ],
+        }
+      : {}),
+    teamPlayers: {
+      some: {
+        team: {
+          registrations: {
+            some: {
+              tournamentCategory: {
+                tournament: { organizerId },
+              },
+            },
+          },
+        },
+      },
+    },
+  };
+
+  const [players, total] = await prisma.$transaction([
+    prisma.playerProfile.findMany({
+      where,
+      include: {
+        user: { select: { email: true } },
+        _count: { select: { teamPlayers: true } },
+      },
+      orderBy: [{ lastName: "asc" }, { firstName: "asc" }],
+      skip,
+      take: PLAYER_ORG_PAGE_SIZE,
+    }),
+    prisma.playerProfile.count({ where }),
+  ]);
+
+  return { players, total, pageSize: PLAYER_ORG_PAGE_SIZE };
 }
 
 export async function getPlayerProfile(playerId: string) {

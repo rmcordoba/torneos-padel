@@ -1,8 +1,8 @@
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { auth } from "@/lib/auth";
-import { getOrganizersByUser } from "@/modules/organizers/queries";
-import { getOrganizerConfig, getCategoriesByOrganizer } from "@/modules/config/queries";
+import { getActiveMembership } from "@/lib/active-organizer";
+import { getOrganizerConfig, getCategoriesByOrganizer, getTournamentsByOrganizer } from "@/modules/config/queries";
 import { getVenuesWithCourts } from "@/modules/scheduling/queries";
 import { OrganizerInfoForm } from "./_components/organizer-info-form";
 import { SettingsForm } from "./_components/settings-form";
@@ -34,15 +34,16 @@ export default async function ConfiguracionPage({
   const session = await auth();
   if (!session?.user) redirect("/login");
 
-  const memberships = await getOrganizersByUser(session.user.id);
-  if (!memberships.length) redirect("/dashboard");
+  const membership = await getActiveMembership(session.user.id);
+  if (!membership) redirect("/dashboard");
 
-  const organizerId = memberships[0].organizerId;
+  const organizerId = membership.organizerId;
 
-  const [organizer, categories, venues] = await Promise.all([
+  const [organizer, categories, venues, tournaments] = await Promise.all([
     getOrganizerConfig(organizerId),
     getCategoriesByOrganizer(organizerId),
     getVenuesWithCourts(organizerId),
+    getTournamentsByOrganizer(organizerId),
   ]);
 
   if (!organizer) redirect("/dashboard");
@@ -54,16 +55,16 @@ export default async function ConfiguracionPage({
 
       {/* Header */}
       <div>
-        <h1 style={{ fontFamily: "Space Grotesk, sans-serif", fontSize: 22, fontWeight: 700, color: "var(--text-primary)", marginBottom: 4 }}>
+        <h1 style={{ fontFamily: "var(--font-space), sans-serif", fontSize: 22, fontWeight: 700, color: "#f8fafc", marginBottom: 4 }}>
           Configuración
         </h1>
-        <p style={{ fontSize: 13, color: "var(--text-faint)" }}>
+        <p style={{ fontSize: 13, color: "#64748b" }}>
           Administrá los datos, reglas y accesos de tu organización
         </p>
       </div>
 
       {/* Tabs */}
-      <div style={{ display: "flex", gap: 2, borderBottom: "1px solid var(--border-subtle)" }}>
+      <div style={{ display: "flex", gap: 2, borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
         {TABS.map((t) => {
           const active = activeTab === t.id;
           return (
@@ -74,7 +75,7 @@ export default async function ConfiguracionPage({
                 padding: "10px 18px",
                 fontSize: 13,
                 fontWeight: active ? 700 : 500,
-                color: active ? A : "var(--text-faint)",
+                color: active ? A : "#64748b",
                 textDecoration: "none",
                 borderBottom: `2px solid ${active ? A : "transparent"}`,
                 marginBottom: -1,
@@ -89,17 +90,17 @@ export default async function ConfiguracionPage({
 
       {/* Tab content */}
       <div style={{
-        background: "oklch(16% 0.012 250)",
-        border: "1px solid var(--border-default)",
+        background: "rgba(12,20,40,0.7)",
+        border: "1px solid rgba(255,255,255,0.07)",
         borderRadius: 14,
         padding: "24px",
       }}>
         {activeTab === "organizacion" && (
           <div>
-            <h2 style={{ fontFamily: "Space Grotesk, sans-serif", fontSize: 15, fontWeight: 700, color: "var(--text-primary)", marginBottom: 4 }}>
+            <h2 style={{ fontFamily: "var(--font-space), sans-serif", fontSize: 15, fontWeight: 700, color: "#f8fafc", marginBottom: 4 }}>
               Datos del organizador
             </h2>
-            <p style={{ fontSize: 12, color: "var(--text-faint)", marginBottom: 20 }}>
+            <p style={{ fontSize: 12, color: "#64748b", marginBottom: 20 }}>
               Información pública de tu organización
             </p>
             <OrganizerInfoForm organizer={organizer} />
@@ -108,10 +109,10 @@ export default async function ConfiguracionPage({
 
         {activeTab === "parametros" && (
           <div>
-            <h2 style={{ fontFamily: "Space Grotesk, sans-serif", fontSize: 15, fontWeight: 700, color: "var(--text-primary)", marginBottom: 4 }}>
+            <h2 style={{ fontFamily: "var(--font-space), sans-serif", fontSize: 15, fontWeight: 700, color: "#f8fafc", marginBottom: 4 }}>
               Parámetros generales
             </h2>
-            <p style={{ fontSize: 12, color: "var(--text-faint)", marginBottom: 20 }}>
+            <p style={{ fontSize: 12, color: "#64748b", marginBottom: 20 }}>
               Estos valores se usan como default al crear nuevos torneos
             </p>
             <SettingsForm settings={organizer.settings} />
@@ -120,10 +121,10 @@ export default async function ConfiguracionPage({
 
         {activeTab === "categorias" && (
           <div>
-            <h2 style={{ fontFamily: "Space Grotesk, sans-serif", fontSize: 15, fontWeight: 700, color: "var(--text-primary)", marginBottom: 4 }}>
+            <h2 style={{ fontFamily: "var(--font-space), sans-serif", fontSize: 15, fontWeight: 700, color: "#f8fafc", marginBottom: 4 }}>
               Categorías
             </h2>
-            <p style={{ fontSize: 12, color: "var(--text-faint)", marginBottom: 20 }}>
+            <p style={{ fontSize: 12, color: "#64748b", marginBottom: 20 }}>
               Las categorías activas están disponibles al crear torneos
             </p>
             <CategoriesManager categories={categories} />
@@ -132,22 +133,22 @@ export default async function ConfiguracionPage({
 
         {activeTab === "colaboradores" && (
           <div>
-            <h2 style={{ fontFamily: "Space Grotesk, sans-serif", fontSize: 15, fontWeight: 700, color: "var(--text-primary)", marginBottom: 4 }}>
+            <h2 style={{ fontFamily: "var(--font-space), sans-serif", fontSize: 15, fontWeight: 700, color: "#f8fafc", marginBottom: 4 }}>
               Colaboradores
             </h2>
-            <p style={{ fontSize: 12, color: "var(--text-faint)", marginBottom: 20 }}>
+            <p style={{ fontSize: 12, color: "#64748b", marginBottom: 20 }}>
               Invitá usuarios para ayudarte a gestionar torneos
             </p>
-            <CollaboratorsManager members={organizer.members} currentUserId={session.user.id} />
+            <CollaboratorsManager members={organizer.members} currentUserId={session.user.id} tournaments={tournaments} />
           </div>
         )}
 
         {activeTab === "sedes" && (
           <div>
-            <h2 style={{ fontFamily: "Space Grotesk, sans-serif", fontSize: 15, fontWeight: 700, color: "var(--text-primary)", marginBottom: 4 }}>
+            <h2 style={{ fontFamily: "var(--font-space), sans-serif", fontSize: 15, fontWeight: 700, color: "#f8fafc", marginBottom: 4 }}>
               Sedes y Canchas
             </h2>
-            <p style={{ fontSize: 12, color: "var(--text-faint)", marginBottom: 20 }}>
+            <p style={{ fontSize: 12, color: "#64748b", marginBottom: 20 }}>
               Gestioná las sedes donde se juegan los torneos y sus canchas
             </p>
             <SedesManager venues={venues} />

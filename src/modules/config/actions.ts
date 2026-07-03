@@ -3,15 +3,17 @@
 import { revalidatePath } from "next/cache";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { getOrganizersByUser } from "@/modules/organizers/queries";
+import { getActiveMembership } from "@/lib/active-organizer";
+import { requireMembership, requireWritable, PermissionError } from "@/lib/permissions";
 import { z } from "zod";
 
 export type ConfigActionState = { error?: string; fieldErrors?: Record<string, string[]>; success?: string } | null;
 
 async function resolveOrganizer(userId: string) {
-  const memberships = await getOrganizersByUser(userId);
-  if (!memberships.length) throw new Error("Sin organización");
-  return memberships[0];
+  const membership = await getActiveMembership(userId);
+  if (!membership) throw new Error("Sin organización");
+  await requireWritable(membership.organizerId);
+  return membership;
 }
 
 // ─── Organizer info ───────────────────────────────────────────────────────────
@@ -186,20 +188,117 @@ export async function inviteCollaborator(
   return null;
 }
 
-export async function removeCollaborator(membershipId: string): Promise<void> {
+export async function removeCollaborator(membershipId: string): Promise<{ error?: string }> {
   const session = await auth();
-  if (!session?.user) return;
+  if (!session?.user) return { error: "No autenticado" };
+
+  let myMembership;
+  try {
+    myMembership = await requireMembership(session.user.id);
+    await requireWritable(myMembership.organizerId);
+  } catch (e) {
+    return { error: e instanceof PermissionError ? e.message : "Sin permisos" };
+  }
+
+  if (myMembership.role !== "OWNER" && myMembership.role !== "ORGANIZER") {
+    return { error: "Sin permisos para eliminar colaboradores" };
+  }
+
+  // Ensure the target membership belongs to the same organizer
+  const target = await prisma.userOrganizer.findFirst({
+    where: { id: membershipId, organizerId: myMembership.organizerId },
+  });
+  if (!target) return { error: "Colaborador no encontrado" };
+
+  // OWNER cannot be removed this way
+  if (target.role === "OWNER") return { error: "No se puede eliminar al propietario" };
+
   await prisma.userOrganizer.delete({ where: { id: membershipId } });
   revalidatePath("/dashboard/configuracion");
+  return {};
 }
 
 export async function updateCollaboratorPermissions(
   membershipId: string,
   permissions: string[]
-): Promise<void> {
+): Promise<{ error?: string }> {
+  const session = await auth();
+  if (!session?.user) return { error: "No autenticado" };
+
+  let myMembership;
+  try {
+    myMembership = await requireMembership(session.user.id);
+    await requireWritable(myMembership.organizerId);
+  } catch (e) {
+    return { error: e instanceof PermissionError ? e.message : "Sin permisos" };
+  }
+
+  if (myMembership.role !== "OWNER" && myMembership.role !== "ORGANIZER") {
+    return { error: "Sin permisos para modificar colaboradores" };
+  }
+
+  const target = await prisma.userOrganizer.findFirst({
+    where: { id: membershipId, organizerId: myMembership.organizerId },
+  });
+  if (!target) return { error: "Colaborador no encontrado" };
+  if (target.role === "OWNER") return { error: "No se pueden modificar los permisos del propietario" };
+
+  const validPermissions = [
+    "MANAGE_TOURNAMENTS","MANAGE_REGISTRATIONS","MANAGE_RESULTS",
+    "MANAGE_SCHEDULE","MANAGE_VENUES","MANAGE_CATEGORIES","VIEW_REPORTS","MANAGE_COLLABORATORS",
+  ];
+  const filtered = permissions.filter((p) => validPermissions.includes(p));
+
   await prisma.userOrganizer.update({
     where: { id: membershipId },
-    data: { permissions: permissions as any },
+    data: { permissions: filtered as any },
   });
   revalidatePath("/dashboard/configuracion");
+  return {};
+}
+
+export async function updateCollaboratorTournamentAccess(
+  membershipId: string,
+  tournamentIds: string[]
+): Promise<{ error?: string }> {
+  const session = await auth();
+  if (!session?.user) return { error: "No autenticado" };
+
+  let myMembership;
+  try {
+    myMembership = await requireMembership(session.user.id);
+    await requireWritable(myMembership.organizerId);
+  } catch (e) {
+    return { error: e instanceof PermissionError ? e.message : "Sin permisos" };
+  }
+
+  if (myMembership.role !== "OWNER" && myMembership.role !== "ORGANIZER") {
+    return { error: "Sin permisos para modificar acceso a torneos" };
+  }
+
+  const target = await prisma.userOrganizer.findFirst({
+    where: { id: membershipId, organizerId: myMembership.organizerId },
+  });
+  if (!target) return { error: "Colaborador no encontrado" };
+
+  // Verify all tournament IDs belong to this organizer
+  if (tournamentIds.length > 0) {
+    const count = await prisma.tournament.count({
+      where: { id: { in: tournamentIds }, organizerId: myMembership.organizerId },
+    });
+    if (count !== tournamentIds.length) return { error: "Uno o más torneos no son válidos" };
+  }
+
+  // Replace all existing access grants for this membership
+  await prisma.$transaction([
+    prisma.tournamentAccess.deleteMany({ where: { userOrganizerId: membershipId } }),
+    ...(tournamentIds.length > 0
+      ? [prisma.tournamentAccess.createMany({
+          data: tournamentIds.map((tournamentId) => ({ userOrganizerId: membershipId, tournamentId })),
+        })]
+      : []),
+  ]);
+
+  revalidatePath("/dashboard/configuracion");
+  return {};
 }

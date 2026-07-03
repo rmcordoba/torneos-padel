@@ -52,28 +52,28 @@ export function AssignScheduleModal({ match, venues, selectedDate, isEdit }: Ass
         onClick={() => setOpen(true)}
         className={
           isEdit
-            ? "flex h-7 w-7 items-center justify-center rounded-lg text-slate-400 hover:bg-slate-100 hover:text-slate-700 transition-colors"
-            : "mt-2 flex items-center gap-1.5 text-xs font-semibold text-emerald-600 hover:text-emerald-700 transition-colors"
+            ? "flex h-7 w-7 items-center justify-center rounded-lg text-slate-500 hover:bg-white/[0.06] hover:text-slate-200 transition-colors"
+            : "mt-2 flex items-center gap-1.5 text-xs font-bold text-lime-400 hover:text-lime-300 transition-colors"
         }
       >
         {isEdit ? <Pencil className="h-3.5 w-3.5" /> : <><Calendar className="h-3 w-3" /> Asignar horario</>}
       </button>
 
       {open && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
-          <div className="w-full max-w-md rounded-2xl bg-white shadow-xl overflow-hidden">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-md">
+          <div className="w-full max-w-md rounded-2xl bg-[rgba(8,16,36,0.97)] border border-white/[0.09] shadow-[0_24px_64px_rgba(0,0,0,0.6)] overflow-hidden backdrop-blur-xl">
             {/* Header */}
-            <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 bg-slate-50">
-              <div>
-                <h2 className="text-sm font-bold text-slate-900">Asignar horario</h2>
-                <p className="text-xs text-slate-400 mt-0.5 truncate">
+            <div className="flex items-center justify-between px-6 py-4 border-b border-white/[0.07] bg-lime-400/[0.06]">
+              <div className="min-w-0">
+                <h2 className="text-sm font-extrabold text-slate-100 font-display">Asignar horario</h2>
+                <p className="text-xs text-slate-500 mt-0.5 truncate">
                   {teamNames[0] ?? "TBD"} vs {teamNames[1] ?? "TBD"} · {tc.category.name}
                 </p>
               </div>
               <button
                 type="button"
                 onClick={() => setOpen(false)}
-                className="h-7 w-7 flex items-center justify-center rounded-lg text-slate-400 hover:bg-slate-200 transition-colors"
+                className="h-7 w-7 flex items-center justify-center rounded-lg text-slate-500 hover:bg-white/[0.08] hover:text-slate-200 transition-colors shrink-0"
               >
                 <X className="h-4 w-4" />
               </button>
@@ -84,7 +84,7 @@ export function AssignScheduleModal({ match, venues, selectedDate, isEdit }: Ass
               <input type="hidden" name="tournamentId" value={tc.tournament.id} />
 
               {state?.error && (
-                <div className="flex items-center gap-2 rounded-lg bg-red-50 border border-red-200 px-3 py-2 text-sm text-red-700">
+                <div className="flex items-center gap-2 rounded-lg bg-rose-500/10 border border-rose-500/25 px-3 py-2 text-sm text-rose-400">
                   <AlertCircle className="h-4 w-4 shrink-0" />
                   {state.error}
                 </div>
@@ -92,7 +92,7 @@ export function AssignScheduleModal({ match, venues, selectedDate, isEdit }: Ass
 
               {/* Date */}
               <div className="space-y-1.5">
-                <label className="text-sm font-semibold text-slate-700">Fecha</label>
+                <label className="text-sm font-bold text-slate-300">Fecha</label>
                 <div className="relative">
                   <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 pointer-events-none" />
                   <input
@@ -100,7 +100,7 @@ export function AssignScheduleModal({ match, venues, selectedDate, isEdit }: Ass
                     name="date"
                     defaultValue={selectedDate}
                     required
-                    className="flex h-10 w-full rounded-xl border border-slate-200 bg-white pl-9 pr-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500"
+                    className="flex h-10 w-full rounded-xl border border-white/[0.08] bg-white/[0.05] text-slate-100 [color-scheme:dark] pl-9 pr-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-lime-400/40"
                   />
                 </div>
               </div>
@@ -108,36 +108,36 @@ export function AssignScheduleModal({ match, venues, selectedDate, isEdit }: Ass
               {/* Time */}
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1.5">
-                  <label className="text-sm font-semibold text-slate-700">Hora inicio</label>
+                  <label className="text-sm font-bold text-slate-300">Hora inicio</label>
                   <div className="relative">
                     <Clock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 pointer-events-none" />
                     <input
                       type="time"
                       name="startTime"
                       required
-                      className="flex h-10 w-full rounded-xl border border-slate-200 bg-white pl-9 pr-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500"
+                      className="flex h-10 w-full rounded-xl border border-white/[0.08] bg-white/[0.05] text-slate-100 [color-scheme:dark] pl-9 pr-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-lime-400/40"
                     />
                   </div>
                 </div>
                 <div className="space-y-1.5">
-                  <label className="text-sm font-semibold text-slate-700">Hora fin</label>
+                  <label className="text-sm font-bold text-slate-300">Hora fin</label>
                   <input
                     type="time"
                     name="endTime"
-                    className="flex h-10 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500"
+                    className="flex h-10 w-full rounded-xl border border-white/[0.08] bg-white/[0.05] text-slate-100 [color-scheme:dark] px-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-lime-400/40"
                   />
                 </div>
               </div>
 
               {/* Venue */}
               <div className="space-y-1.5">
-                <label className="text-sm font-semibold text-slate-700">Sede</label>
+                <label className="text-sm font-bold text-slate-300">Sede</label>
                 <select
                   name="venueId"
                   value={venueId}
                   onChange={(e) => setVenueId(e.target.value)}
                   required
-                  className="flex h-10 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500"
+                  className="flex h-10 w-full rounded-xl border border-white/[0.08] bg-white/[0.05] text-slate-100 [color-scheme:dark] px-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-lime-400/40"
                 >
                   {venues.map((v) => (
                     <option key={v.id} value={v.id}>{v.name}</option>
@@ -148,10 +148,10 @@ export function AssignScheduleModal({ match, venues, selectedDate, isEdit }: Ass
               {/* Court */}
               {selectedVenue && selectedVenue.courts.length > 0 && (
                 <div className="space-y-1.5">
-                  <label className="text-sm font-semibold text-slate-700">Cancha</label>
+                  <label className="text-sm font-bold text-slate-300">Cancha</label>
                   <select
                     name="courtId"
-                    className="flex h-10 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500"
+                    className="flex h-10 w-full rounded-xl border border-white/[0.08] bg-white/[0.05] text-slate-100 [color-scheme:dark] px-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-lime-400/40"
                   >
                     <option value="">Sin cancha específica</option>
                     {selectedVenue.courts.map((c) => (
@@ -163,18 +163,34 @@ export function AssignScheduleModal({ match, venues, selectedDate, isEdit }: Ass
                 </div>
               )}
 
-              <div className="flex justify-end gap-2 pt-1 border-t border-slate-100">
+              {/* Motivo (solo al reprogramar — queda en el historial) */}
+              {isEdit && (
+                <div className="space-y-1.5">
+                  <label className="text-sm font-bold text-slate-300">
+                    Motivo del cambio <span className="font-normal text-slate-500">(opcional)</span>
+                  </label>
+                  <input
+                    type="text"
+                    name="reason"
+                    maxLength={300}
+                    placeholder="Ej: lluvia, pedido de los jugadores..."
+                    className="flex h-10 w-full rounded-xl border border-white/[0.08] bg-white/[0.05] text-slate-100 px-3 text-sm placeholder:text-slate-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-lime-400/40"
+                  />
+                </div>
+              )}
+
+              <div className="flex justify-end gap-2 pt-3 border-t border-white/[0.06]">
                 <button
                   type="button"
                   onClick={() => setOpen(false)}
-                  className="rounded-lg px-4 py-2 text-sm font-medium text-slate-600 hover:bg-slate-100 transition-colors"
+                  className="rounded-lg px-4 py-2 text-sm font-semibold text-slate-400 hover:bg-white/[0.05] transition-colors"
                 >
                   Cancelar
                 </button>
                 <button
                   type="submit"
                   disabled={isPending}
-                  className="flex items-center gap-2 rounded-lg bg-emerald-600 px-5 py-2 text-sm font-semibold text-white hover:bg-emerald-700 transition-colors disabled:opacity-50"
+                  className="flex items-center gap-2 rounded-lg bg-lime-400 px-5 py-2 text-sm font-extrabold text-[#080e1a] shadow-[0_0_20px_rgba(163,230,53,0.3)] hover:bg-lime-300 transition-colors disabled:opacity-50"
                 >
                   {isPending
                     ? <><Loader2 className="h-4 w-4 animate-spin" /> Guardando...</>

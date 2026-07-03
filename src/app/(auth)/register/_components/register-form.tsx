@@ -89,7 +89,7 @@ export function RegisterForm() {
           cursor: isPending ? "not-allowed" : "pointer",
           opacity: isPending ? 0.6 : 1,
           marginTop: 4,
-          fontFamily: "Space Grotesk, sans-serif",
+          fontFamily: "var(--font-space), sans-serif",
           display: "flex",
           alignItems: "center",
           justifyContent: "center",

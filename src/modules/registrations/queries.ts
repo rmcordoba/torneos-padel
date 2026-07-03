@@ -44,7 +44,7 @@ export async function getCategoryWithRegistrationCounts(tournamentCategoryId: st
       where: { id: tournamentCategoryId },
       include: {
         category: true,
-        tournament: { select: { id: true, name: true, organizerId: true } },
+        tournament: { select: { id: true, name: true, organizerId: true, hasWeekdayPlay: true } },
       },
     }),
     prisma.registration.count({ where: { tournamentCategoryId, status: "APPROVED" } }),
@@ -54,11 +54,30 @@ export async function getCategoryWithRegistrationCounts(tournamentCategoryId: st
   return tc ? { ...tc, counts: { approved, pending, waitlist } } : null;
 }
 
-export async function getAllPendingRegistrations(organizerId: string) {
+export async function getAllPendingRegistrations(
+  organizerId: string,
+  opts: { showAll?: boolean; from?: Date; to?: Date } = {}
+) {
+  const { showAll, from, to } = opts;
+
+  let createdAt: object | undefined;
+  if (!showAll) {
+    if (from || to) {
+      createdAt = { ...(from ? { gte: from } : {}), ...(to ? { lte: to } : {}) };
+    } else {
+      const start = new Date();
+      start.setUTCHours(0, 0, 0, 0);
+      const end = new Date();
+      end.setUTCHours(23, 59, 59, 999);
+      createdAt = { gte: start, lte: end };
+    }
+  }
+
   return prisma.registration.findMany({
     where: {
       status: "PENDING",
       tournamentCategory: { tournament: { organizerId } },
+      ...(createdAt ? { createdAt } : {}),
     },
     include: {
       team: { include: { players: { include: { playerProfile: true } } } },

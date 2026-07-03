@@ -165,8 +165,8 @@ function AuditRow({
         display: "grid", gridTemplateColumns: "48px 1fr auto",
         alignItems: "stretch", cursor: "pointer", overflow: "hidden",
         borderRadius: 10, transition: "all .12s",
-        background: isSelected ? "rgba(163,230,53,.07)" : hover ? "oklch(20% 0.012 250)" : "oklch(17% 0.012 250)",
-        border: `1px solid ${isSelected ? "rgba(163,230,53,.3)" : hover ? "oklch(28% 0.01 250)" : "oklch(22% 0.01 250)"}`,
+        background: isSelected ? "rgba(163,230,53,.07)" : hover ? "rgba(255,255,255,0.04)" : "rgba(255,255,255,0.02)",
+        border: `1px solid ${isSelected ? "rgba(163,230,53,.3)" : hover ? "rgba(255,255,255,0.08)" : "rgba(255,255,255,0.05)"}`,
       }}
     >
       {/* Icon */}
@@ -178,7 +178,7 @@ function AuditRow({
       <div style={{ padding: "11px 14px" }}>
         <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4, flexWrap: "wrap" }}>
           <span style={{ fontSize: 12, fontWeight: 700, color }}>{actionLabel}</span>
-          <span style={{ fontSize: 10, padding: "1px 7px", borderRadius: 10, background: "oklch(22% 0.01 250)", color: "var(--text-faint)", fontWeight: 700 }}>
+          <span style={{ fontSize: 10, padding: "1px 7px", borderRadius: 10, background: "rgba(255,255,255,0.05)", color: "#64748b", fontWeight: 700 }}>
             {initials} · {entry.userName.split("@")[0]}
           </span>
           {entry.tournamentName && (
@@ -187,13 +187,13 @@ function AuditRow({
             </span>
           )}
         </div>
-        <div style={{ fontSize: 12, color: "var(--text-faint)", lineHeight: 1.4 }}>{detail}</div>
+        <div style={{ fontSize: 12, color: "#64748b", lineHeight: 1.4 }}>{detail}</div>
       </div>
 
       {/* Timestamp */}
       <div style={{ padding: "11px 14px", display: "flex", flexDirection: "column", alignItems: "flex-end", justifyContent: "center", gap: 4, minWidth: 78 }}>
-        <span style={{ fontSize: 11, color: "var(--text-darkest)", fontFamily: "Space Grotesk, sans-serif" }}>{isoTime(entry.createdAt)}</span>
-        <span style={{ fontSize: 10, color: "oklch(34% 0.01 250)" }}>{ENTITY_LABEL[entry.entity] ?? entry.entity}</span>
+        <span style={{ fontSize: 11, color: "#334155", fontFamily: "var(--font-space), sans-serif" }}>{isoTime(entry.createdAt)}</span>
+        <span style={{ fontSize: 10, color: "rgba(255,255,255,0.13)" }}>{ENTITY_LABEL[entry.entity] ?? entry.entity}</span>
       </div>
     </div>
   );
@@ -207,7 +207,7 @@ function LogDetailPanel({ entry, onClose }: { entry: AuditEntry; onClose: () => 
   const MONTHS      = ["","Ene","Feb","Mar","Abr","May","Jun","Jul","Ago","Sep","Oct","Nov","Dic"];
 
   return (
-    <div style={{ background: "oklch(16% 0.012 250)", border: `1px solid ${color}30`, borderRadius: 13, overflow: "hidden" }}>
+    <div style={{ background: "rgba(12,20,40,0.7)", border: `1px solid ${color}30`, borderRadius: 13, overflow: "hidden" }}>
       {/* Header */}
       <div style={{ padding: "14px 18px", background: `${color}0c`, borderBottom: `1px solid ${color}20`, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
@@ -216,12 +216,12 @@ function LogDetailPanel({ entry, onClose }: { entry: AuditEntry; onClose: () => 
           </div>
           <div>
             <div style={{ fontSize: 13, fontWeight: 700, color }}>{actionLabel}</div>
-            <div style={{ fontSize: 10, color: "var(--text-darkest)" }}>#{entry.id.slice(0, 10)}</div>
+            <div style={{ fontSize: 10, color: "#334155" }}>#{entry.id.slice(0, 10)}</div>
           </div>
         </div>
         <button
           onClick={onClose}
-          style={{ width: 26, height: 26, borderRadius: 7, background: "oklch(22% 0.01 250)", border: "1px solid oklch(28% 0.01 250)", color: "var(--text-faint)", cursor: "pointer", fontSize: 11 }}
+          style={{ width: 26, height: 26, borderRadius: 7, background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.08)", color: "#64748b", cursor: "pointer", fontSize: 11 }}
         >
           ✕
         </button>
@@ -229,9 +229,9 @@ function LogDetailPanel({ entry, onClose }: { entry: AuditEntry; onClose: () => 
 
       <div style={{ padding: "16px 18px", display: "flex", flexDirection: "column", gap: 10 }}>
         {/* Detail string */}
-        <div style={{ padding: "12px 14px", background: "oklch(20% 0.012 250)", borderRadius: 10, border: "1px solid oklch(26% 0.01 250)" }}>
-          <div style={{ fontSize: 10, fontWeight: 700, color: "var(--text-darkest)", textTransform: "uppercase", letterSpacing: "0.07em", marginBottom: 6 }}>Detalle</div>
-          <div style={{ fontSize: 13, color: "var(--text-secondary)", lineHeight: 1.5 }}>{buildDetail(entry)}</div>
+        <div style={{ padding: "12px 14px", background: "rgba(255,255,255,0.04)", borderRadius: 10, border: "1px solid rgba(255,255,255,0.07)" }}>
+          <div style={{ fontSize: 10, fontWeight: 700, color: "#334155", textTransform: "uppercase", letterSpacing: "0.07em", marginBottom: 6 }}>Detalle</div>
+          <div style={{ fontSize: 13, color: "#e2e8f0", lineHeight: 1.5 }}>{buildDetail(entry)}</div>
         </div>
 
         {/* Fields */}
@@ -245,8 +245,8 @@ function LogDetailPanel({ entry, onClose }: { entry: AuditEntry; onClose: () => 
           { label: "IP",           value: entry.ipAddress ?? "—" },
         ].map((f) => (
           <div key={f.label} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8 }}>
-            <span style={{ fontSize: 11, color: "var(--text-darkest)", flexShrink: 0 }}>{f.label}</span>
-            <span style={{ fontSize: 12, fontWeight: 600, color: "var(--text-faint)", textAlign: "right", maxWidth: 170, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+            <span style={{ fontSize: 11, color: "#334155", flexShrink: 0 }}>{f.label}</span>
+            <span style={{ fontSize: 12, fontWeight: 600, color: "#64748b", textAlign: "right", maxWidth: 170, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
               {f.value}
             </span>
           </div>
@@ -254,10 +254,10 @@ function LogDetailPanel({ entry, onClose }: { entry: AuditEntry; onClose: () => 
 
         {/* Before / After JSON */}
         {(entry.before || entry.after) && (
-          <div style={{ display: "flex", flexDirection: "column", gap: 8, paddingTop: 8, borderTop: "1px solid oklch(22% 0.01 250)" }}>
+          <div style={{ display: "flex", flexDirection: "column", gap: 8, paddingTop: 8, borderTop: "1px solid rgba(255,255,255,0.05)" }}>
             {entry.before && (
               <div>
-                <div style={{ fontSize: 10, fontWeight: 700, color: "var(--text-darkest)", textTransform: "uppercase", letterSpacing: "0.07em", marginBottom: 4 }}>Antes</div>
+                <div style={{ fontSize: 10, fontWeight: 700, color: "#334155", textTransform: "uppercase", letterSpacing: "0.07em", marginBottom: 4 }}>Antes</div>
                 <pre style={{ fontSize: 11, color: "#f87171", background: "rgba(248,113,113,.05)", border: "1px solid rgba(248,113,113,.15)", borderRadius: 8, padding: "8px 10px", overflowX: "auto", margin: 0, whiteSpace: "pre-wrap" }}>
                   {JSON.stringify(entry.before, null, 2)}
                 </pre>
@@ -265,7 +265,7 @@ function LogDetailPanel({ entry, onClose }: { entry: AuditEntry; onClose: () => 
             )}
             {entry.after && (
               <div>
-                <div style={{ fontSize: 10, fontWeight: 700, color: "var(--text-darkest)", textTransform: "uppercase", letterSpacing: "0.07em", marginBottom: 4 }}>Después</div>
+                <div style={{ fontSize: 10, fontWeight: 700, color: "#334155", textTransform: "uppercase", letterSpacing: "0.07em", marginBottom: 4 }}>Después</div>
                 <pre style={{ fontSize: 11, color: "#a3e635", background: "rgba(163,230,53,.05)", border: "1px solid rgba(163,230,53,.15)", borderRadius: 8, padding: "8px 10px", overflowX: "auto", margin: 0, whiteSpace: "pre-wrap" }}>
                   {JSON.stringify(entry.after, null, 2)}
                 </pre>
@@ -288,13 +288,13 @@ function ActivitySummary({ entries }: { entries: AuditEntry[] }) {
   const activeItems = DIST_ITEMS.filter((i) => counts[i.id] > 0);
 
   return (
-    <div style={{ background: "oklch(16% 0.012 250)", border: "1px solid oklch(24% 0.01 250)", borderRadius: 13, padding: "16px 18px" }}>
-      <div style={{ fontSize: 11, fontWeight: 700, color: "var(--text-darkest)", textTransform: "uppercase", letterSpacing: "0.07em", marginBottom: 16 }}>
+    <div style={{ background: "rgba(12,20,40,0.7)", border: "1px solid rgba(255,255,255,0.06)", borderRadius: 13, padding: "16px 18px" }}>
+      <div style={{ fontSize: 11, fontWeight: 700, color: "#334155", textTransform: "uppercase", letterSpacing: "0.07em", marginBottom: 16 }}>
         Distribución de eventos
       </div>
 
       {/* Stacked bar */}
-      <div style={{ display: "flex", height: 8, borderRadius: 8, overflow: "hidden", marginBottom: 16, background: "oklch(22% 0.01 250)" }}>
+      <div style={{ display: "flex", height: 8, borderRadius: 8, overflow: "hidden", marginBottom: 16, background: "rgba(255,255,255,0.05)" }}>
         {activeItems.map((i) => (
           <div key={i.id} style={{ width: `${(counts[i.id] / total) * 100}%`, background: i.color, flexShrink: 0 }} />
         ))}
@@ -305,24 +305,24 @@ function ActivitySummary({ entries }: { entries: AuditEntry[] }) {
           <div key={i.id} style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
             <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
               <span style={{ width: 10, height: 10, borderRadius: 3, background: i.color, flexShrink: 0 }} />
-              <span style={{ fontSize: 12, color: "var(--text-faint)" }}>{i.label}</span>
+              <span style={{ fontSize: 12, color: "#64748b" }}>{i.label}</span>
             </div>
             <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-              <div style={{ width: 60, height: 4, borderRadius: 4, background: "oklch(22% 0.01 250)", overflow: "hidden" }}>
+              <div style={{ width: 60, height: 4, borderRadius: 4, background: "rgba(255,255,255,0.05)", overflow: "hidden" }}>
                 <div style={{ width: `${(counts[i.id] / total) * 100}%`, height: "100%", background: i.color, borderRadius: 4 }} />
               </div>
-              <span style={{ fontSize: 12, fontWeight: 700, color: i.color, fontFamily: "Space Grotesk, sans-serif", minWidth: 24, textAlign: "right" }}>{counts[i.id]}</span>
+              <span style={{ fontSize: 12, fontWeight: 700, color: i.color, fontFamily: "var(--font-space), sans-serif", minWidth: 24, textAlign: "right" }}>{counts[i.id]}</span>
             </div>
           </div>
         ))}
       </div>
 
-      <div style={{ marginTop: 14, paddingTop: 12, borderTop: "1px solid oklch(22% 0.01 250)", display: "flex", justifyContent: "space-between", fontSize: 11, color: "var(--text-darkest)" }}>
+      <div style={{ marginTop: 14, paddingTop: 12, borderTop: "1px solid rgba(255,255,255,0.05)", display: "flex", justifyContent: "space-between", fontSize: 11, color: "#334155" }}>
         <span>Total de eventos</span>
-        <span style={{ fontWeight: 800, color: "var(--text-faint)", fontFamily: "Space Grotesk, sans-serif" }}>{total}</span>
+        <span style={{ fontWeight: 800, color: "#64748b", fontFamily: "var(--font-space), sans-serif" }}>{total}</span>
       </div>
 
-      <div style={{ marginTop: 6, fontSize: 11, color: "oklch(34% 0.01 250)", textAlign: "center" }}>
+      <div style={{ marginTop: 6, fontSize: 11, color: "rgba(255,255,255,0.13)", textAlign: "center" }}>
         Seleccioná una fila para ver el detalle
       </div>
     </div>
@@ -384,14 +384,14 @@ export function AuditoriaClient({ entries }: { entries: AuditEntry[] }) {
       {/* Header */}
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: 12 }}>
         <div>
-          <h1 style={{ fontFamily: "Space Grotesk, sans-serif", fontSize: 22, fontWeight: 700, color: "var(--text-primary)", marginBottom: 4 }}>
+          <h1 style={{ fontFamily: "var(--font-space), sans-serif", fontSize: 22, fontWeight: 700, color: "#f8fafc", marginBottom: 4 }}>
             Auditoría
           </h1>
-          <p style={{ fontSize: 13, color: "var(--text-faint)" }}>Registro completo de actividad del sistema</p>
+          <p style={{ fontSize: 13, color: "#64748b" }}>Registro completo de actividad del sistema</p>
         </div>
         <button
           onClick={() => exportCSV(filtered)}
-          style={{ padding: "9px 18px", borderRadius: 9, background: "oklch(22% 0.012 250)", border: "1px solid oklch(30% 0.01 250)", color: "var(--text-faint)", fontFamily: "inherit", fontSize: 13, fontWeight: 600, cursor: "pointer", display: "flex", alignItems: "center", gap: 7 }}
+          style={{ padding: "9px 18px", borderRadius: 9, background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", color: "#64748b", fontFamily: "inherit", fontSize: 13, fontWeight: 600, cursor: "pointer", display: "flex", alignItems: "center", gap: 7 }}
         >
           ↓ Exportar CSV
         </button>
@@ -405,14 +405,14 @@ export function AuditoriaClient({ entries }: { entries: AuditEntry[] }) {
           { label: "Inscripciones",    value: regCount,    sub: "acciones",              color: "#fbbf24", icon: "📝" },
           { label: "Usuarios activos", value: activeUsers, sub: "hoy",                   color: "#a78bfa", icon: "👤" },
         ].map((s) => (
-          <div key={s.label} style={{ background: "oklch(16% 0.012 250)", border: "1px solid oklch(24% 0.01 250)", borderRadius: 13, padding: "16px 18px", display: "flex", alignItems: "center", gap: 14 }}>
+          <div key={s.label} style={{ background: "rgba(12,20,40,0.7)", border: "1px solid rgba(255,255,255,0.06)", borderRadius: 13, padding: "16px 18px", display: "flex", alignItems: "center", gap: 14 }}>
             <div style={{ width: 42, height: 42, borderRadius: 11, background: `${s.color}18`, border: `1px solid ${s.color}30`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18, flexShrink: 0 }}>
               {s.icon}
             </div>
             <div>
-              <div style={{ fontFamily: "Space Grotesk, sans-serif", fontSize: 24, fontWeight: 800, color: s.color, lineHeight: 1 }}>{s.value}</div>
-              <div style={{ fontSize: 11, color: "var(--text-faint)", marginTop: 3 }}>{s.label}</div>
-              <div style={{ fontSize: 10, color: "var(--text-darkest)" }}>{s.sub}</div>
+              <div style={{ fontFamily: "var(--font-space), sans-serif", fontSize: 24, fontWeight: 800, color: s.color, lineHeight: 1 }}>{s.value}</div>
+              <div style={{ fontSize: 11, color: "#64748b", marginTop: 3 }}>{s.label}</div>
+              <div style={{ fontSize: 10, color: "#334155" }}>{s.sub}</div>
             </div>
           </div>
         ))}
@@ -425,16 +425,16 @@ export function AuditoriaClient({ entries }: { entries: AuditEntry[] }) {
         <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
 
           {/* Filters */}
-          <div style={{ background: "oklch(16% 0.012 250)", border: "1px solid oklch(24% 0.01 250)", borderRadius: 13, padding: "14px 16px", display: "flex", flexDirection: "column", gap: 12 }}>
+          <div style={{ background: "rgba(12,20,40,0.7)", border: "1px solid rgba(255,255,255,0.06)", borderRadius: 13, padding: "14px 16px", display: "flex", flexDirection: "column", gap: 12 }}>
             {/* Search */}
             <div style={{ position: "relative" }}>
               <input
                 value={search}
                 onChange={(e) => { setSearch(e.target.value); resetPage(); }}
                 placeholder="Buscar — usuario, detalle, entidad…"
-                style={{ width: "100%", boxSizing: "border-box", padding: "9px 14px 9px 36px", background: "oklch(20% 0.012 250)", border: "1px solid oklch(28% 0.01 250)", borderRadius: 9, color: "var(--text-secondary)", fontFamily: "inherit", fontSize: 13, outline: "none" }}
+                style={{ width: "100%", boxSizing: "border-box", padding: "9px 14px 9px 36px", background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 9, color: "#e2e8f0", fontFamily: "inherit", fontSize: 13, outline: "none" }}
               />
-              <span style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)", color: "var(--text-darkest)", fontSize: 14 }}>🔍</span>
+              <span style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)", color: "#334155", fontSize: 14 }}>🔍</span>
             </div>
 
             {/* Group pills */}
@@ -444,9 +444,9 @@ export function AuditoriaClient({ entries }: { entries: AuditEntry[] }) {
                   key={f.id}
                   onClick={() => { setFilterGroup(f.id); resetPage(); }}
                   style={{ padding: "5px 12px", borderRadius: 20, border: "1px solid", fontFamily: "inherit", fontSize: 11, fontWeight: 600, cursor: "pointer", transition: "all .1s",
-                    borderColor: filterGroup === f.id ? "rgba(163,230,53,.4)" : "oklch(28% 0.01 250)",
+                    borderColor: filterGroup === f.id ? "rgba(163,230,53,.4)" : "rgba(255,255,255,0.08)",
                     background:  filterGroup === f.id ? "rgba(163,230,53,.12)" : "transparent",
-                    color:       filterGroup === f.id ? A : "var(--text-darkest)",
+                    color:       filterGroup === f.id ? A : "#334155",
                   }}
                 >
                   {f.label}
@@ -459,7 +459,7 @@ export function AuditoriaClient({ entries }: { entries: AuditEntry[] }) {
               <select
                 value={filterAction}
                 onChange={(e) => { setFilterAction(e.target.value); resetPage(); }}
-                style={{ padding: "6px 10px", background: "oklch(20% 0.012 250)", border: "1px solid oklch(28% 0.01 250)", borderRadius: 8, color: "var(--text-faint)", fontFamily: "inherit", fontSize: 12, outline: "none", cursor: "pointer" }}
+                style={{ padding: "6px 10px", background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: 8, color: "#64748b", fontFamily: "inherit", fontSize: 12, outline: "none", cursor: "pointer" }}
               >
                 <option value="todas">Todas las acciones</option>
                 {Object.entries(ACTION_LABEL).map(([k, v]) => (
@@ -468,20 +468,20 @@ export function AuditoriaClient({ entries }: { entries: AuditEntry[] }) {
               </select>
             </div>
 
-            <div style={{ fontSize: 11, color: "var(--text-darkest)" }}>
+            <div style={{ fontSize: 11, color: "#334155" }}>
               {filtered.length} evento{filtered.length !== 1 ? "s" : ""} encontrado{filtered.length !== 1 ? "s" : ""}
               {filtered.length !== entries.length && (
-                <span style={{ color: "oklch(38% 0.01 250)" }}> de {entries.length} totales</span>
+                <span style={{ color: "rgba(255,255,255,0.16)" }}> de {entries.length} totales</span>
               )}
             </div>
           </div>
 
           {/* Empty state */}
           {filtered.length === 0 && (
-            <div style={{ padding: "60px 0", textAlign: "center", background: "oklch(16% 0.012 250)", border: "1px solid oklch(24% 0.01 250)", borderRadius: 13 }}>
+            <div style={{ padding: "60px 0", textAlign: "center", background: "rgba(12,20,40,0.7)", border: "1px solid rgba(255,255,255,0.06)", borderRadius: 13 }}>
               <div style={{ fontSize: 36, marginBottom: 12, opacity: 0.4 }}>🛡</div>
-              <p style={{ fontSize: 14, color: "var(--text-faint)" }}>Sin registros de auditoría</p>
-              <p style={{ fontSize: 12, color: "var(--text-darkest)", marginTop: 4 }}>
+              <p style={{ fontSize: 14, color: "#64748b" }}>Sin registros de auditoría</p>
+              <p style={{ fontSize: 12, color: "#334155", marginTop: 4 }}>
                 {entries.length === 0 ? "Las acciones del sistema quedarán registradas aquí." : "Probá cambiando los filtros."}
               </p>
             </div>
@@ -491,11 +491,11 @@ export function AuditoriaClient({ entries }: { entries: AuditEntry[] }) {
           {Array.from(grouped.entries()).map(([dk, dayEntries]) => (
             <div key={dk}>
               <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 8 }}>
-                <span style={{ fontSize: 11, fontWeight: 700, color: "var(--text-darkest)", textTransform: "uppercase", letterSpacing: "0.08em" }}>
+                <span style={{ fontSize: 11, fontWeight: 700, color: "#334155", textTransform: "uppercase", letterSpacing: "0.08em" }}>
                   {dateLabel(dk)}
                 </span>
-                <div style={{ flex: 1, height: 1, background: "oklch(22% 0.01 250)" }} />
-                <span style={{ fontSize: 10, color: "var(--text-darkest)" }}>{dayEntries.length} evento{dayEntries.length !== 1 ? "s" : ""}</span>
+                <div style={{ flex: 1, height: 1, background: "rgba(255,255,255,0.05)" }} />
+                <span style={{ fontSize: 10, color: "#334155" }}>{dayEntries.length} evento{dayEntries.length !== 1 ? "s" : ""}</span>
               </div>
               <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
                 {dayEntries.map((e) => (
@@ -516,7 +516,7 @@ export function AuditoriaClient({ entries }: { entries: AuditEntry[] }) {
               <button
                 onClick={() => setPage((p) => Math.max(0, p - 1))}
                 disabled={page === 0}
-                style={{ padding: "6px 14px", borderRadius: 8, border: "1px solid oklch(28% 0.01 250)", background: "oklch(20% 0.012 250)", color: page === 0 ? "var(--text-darkest)" : "var(--text-faint)", cursor: page === 0 ? "not-allowed" : "pointer", fontFamily: "inherit", fontSize: 12 }}
+                style={{ padding: "6px 14px", borderRadius: 8, border: "1px solid rgba(255,255,255,0.08)", background: "rgba(255,255,255,0.04)", color: page === 0 ? "#334155" : "#64748b", cursor: page === 0 ? "not-allowed" : "pointer", fontFamily: "inherit", fontSize: 12 }}
               >
                 ← Anterior
               </button>
@@ -528,10 +528,10 @@ export function AuditoriaClient({ entries }: { entries: AuditEntry[] }) {
                   <button
                     key={p}
                     onClick={() => setPage(p)}
-                    style={{ width: 32, height: 32, borderRadius: 8, border: "1px solid", fontFamily: "Space Grotesk, sans-serif", fontSize: 12, fontWeight: 700, cursor: "pointer",
-                      borderColor: page === p ? "rgba(163,230,53,.4)" : "oklch(28% 0.01 250)",
-                      background:  page === p ? "rgba(163,230,53,.12)" : "oklch(20% 0.012 250)",
-                      color:       page === p ? A : "var(--text-faint)",
+                    style={{ width: 32, height: 32, borderRadius: 8, border: "1px solid", fontFamily: "var(--font-space), sans-serif", fontSize: 12, fontWeight: 700, cursor: "pointer",
+                      borderColor: page === p ? "rgba(163,230,53,.4)" : "rgba(255,255,255,0.08)",
+                      background:  page === p ? "rgba(163,230,53,.12)" : "rgba(255,255,255,0.04)",
+                      color:       page === p ? A : "#64748b",
                     }}
                   >
                     {p + 1}
@@ -542,7 +542,7 @@ export function AuditoriaClient({ entries }: { entries: AuditEntry[] }) {
               <button
                 onClick={() => setPage((p) => Math.min(totalPages - 1, p + 1))}
                 disabled={page === totalPages - 1}
-                style={{ padding: "6px 14px", borderRadius: 8, border: "1px solid oklch(28% 0.01 250)", background: "oklch(20% 0.012 250)", color: page === totalPages - 1 ? "var(--text-darkest)" : "var(--text-faint)", cursor: page === totalPages - 1 ? "not-allowed" : "pointer", fontFamily: "inherit", fontSize: 12 }}
+                style={{ padding: "6px 14px", borderRadius: 8, border: "1px solid rgba(255,255,255,0.08)", background: "rgba(255,255,255,0.04)", color: page === totalPages - 1 ? "#334155" : "#64748b", cursor: page === totalPages - 1 ? "not-allowed" : "pointer", fontFamily: "inherit", fontSize: 12 }}
               >
                 Siguiente →
               </button>
@@ -559,8 +559,8 @@ export function AuditoriaClient({ entries }: { entries: AuditEntry[] }) {
           )}
 
           {/* Recent users */}
-          <div style={{ background: "oklch(16% 0.012 250)", border: "1px solid oklch(24% 0.01 250)", borderRadius: 13, padding: "16px 18px" }}>
-            <div style={{ fontSize: 11, fontWeight: 700, color: "var(--text-darkest)", textTransform: "uppercase", letterSpacing: "0.07em", marginBottom: 14 }}>
+          <div style={{ background: "rgba(12,20,40,0.7)", border: "1px solid rgba(255,255,255,0.06)", borderRadius: 13, padding: "16px 18px" }}>
+            <div style={{ fontSize: 11, fontWeight: 700, color: "#334155", textTransform: "uppercase", letterSpacing: "0.07em", marginBottom: 14 }}>
               Usuarios activos hoy
             </div>
             {(() => {
@@ -583,7 +583,7 @@ export function AuditoriaClient({ entries }: { entries: AuditEntry[] }) {
                 .slice(0, 5);
 
               if (users.length === 0) {
-                return <p style={{ fontSize: 12, color: "var(--text-darkest)", textAlign: "center", padding: "12px 0" }}>Sin actividad hoy</p>;
+                return <p style={{ fontSize: 12, color: "#334155", textAlign: "center", padding: "12px 0" }}>Sin actividad hoy</p>;
               }
 
               return users.map((u) => {
@@ -591,17 +591,17 @@ export function AuditoriaClient({ entries }: { entries: AuditEntry[] }) {
                 const minsAgo  = Math.floor((Date.now() - new Date(u.lastAt).getTime()) / 60000);
                 const lastStr  = minsAgo < 60 ? `hace ${minsAgo}m` : `hace ${Math.floor(minsAgo / 60)}h`;
                 return (
-                  <div key={u.email} style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 8, padding: "10px 12px", background: "oklch(20% 0.012 250)", borderRadius: 9, border: "1px solid oklch(26% 0.01 250)" }}>
-                    <div style={{ width: 32, height: 32, borderRadius: 8, background: "rgba(163,230,53,.12)", border: "1px solid rgba(163,230,53,.25)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11, fontWeight: 800, color: A, fontFamily: "Space Grotesk, sans-serif", flexShrink: 0 }}>
+                  <div key={u.email} style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 8, padding: "10px 12px", background: "rgba(255,255,255,0.04)", borderRadius: 9, border: "1px solid rgba(255,255,255,0.07)" }}>
+                    <div style={{ width: 32, height: 32, borderRadius: 8, background: "rgba(163,230,53,.12)", border: "1px solid rgba(163,230,53,.25)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11, fontWeight: 800, color: A, fontFamily: "var(--font-space), sans-serif", flexShrink: 0 }}>
                       {initials}
                     </div>
                     <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ fontSize: 12, fontWeight: 700, color: "var(--text-secondary)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{u.name}</div>
-                      <div style={{ fontSize: 10, color: "var(--text-darkest)" }}>{lastStr}</div>
+                      <div style={{ fontSize: 12, fontWeight: 700, color: "#e2e8f0", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{u.name}</div>
+                      <div style={{ fontSize: 10, color: "#334155" }}>{lastStr}</div>
                     </div>
                     <div style={{ textAlign: "right", flexShrink: 0 }}>
-                      <div style={{ fontSize: 14, fontWeight: 800, color: "var(--text-faint)", fontFamily: "Space Grotesk, sans-serif" }}>{u.count}</div>
-                      <div style={{ fontSize: 9, color: "var(--text-darkest)" }}>acciones</div>
+                      <div style={{ fontSize: 14, fontWeight: 800, color: "#64748b", fontFamily: "var(--font-space), sans-serif" }}>{u.count}</div>
+                      <div style={{ fontSize: 9, color: "#334155" }}>acciones</div>
                     </div>
                   </div>
                 );

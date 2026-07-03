@@ -6,10 +6,21 @@ export async function getOrganizerConfig(organizerId: string) {
     include: {
       settings: true,
       members: {
-        include: { user: { select: { id: true, email: true, name: true } } },
+        include: {
+          user: { select: { id: true, email: true, name: true } },
+          tournamentAccess: { select: { tournamentId: true } },
+        },
         orderBy: { createdAt: "asc" },
       },
     },
+  });
+}
+
+export async function getTournamentsByOrganizer(organizerId: string) {
+  return prisma.tournament.findMany({
+    where: { organizerId },
+    select: { id: true, name: true, status: true },
+    orderBy: { startDate: "desc" },
   });
 }
 

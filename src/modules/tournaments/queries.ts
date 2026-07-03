@@ -29,6 +29,22 @@ export async function listTournamentsByOrganizer(
   });
 }
 
+export async function searchTournamentsByOrganizer(
+  organizerId: string,
+  query: string,
+  limit = 5
+) {
+  return prisma.tournament.findMany({
+    where: {
+      organizerId,
+      name: { contains: query, mode: "insensitive" },
+    },
+    select: { id: true, name: true, status: true, startDate: true },
+    orderBy: { startDate: "desc" },
+    take: limit,
+  });
+}
+
 export async function listPublicTournaments() {
   return prisma.tournament.findMany({
     where: { isPublic: true, status: { not: "DRAFT" } },
@@ -51,6 +67,7 @@ export async function getTournamentForEdit(id: string, organizerId: string) {
       endDate: true,
       registrationDeadline: true,
       isPublic: true,
+      hasWeekdayPlay: true,
       status: true,
     },
   });

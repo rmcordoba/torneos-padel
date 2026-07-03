@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import { auth } from "@/lib/auth";
-import { getOrganizersByUser } from "@/modules/organizers/queries";
+import { getActiveMembership } from "@/lib/active-organizer";
 import {
   getRegistrationReport,
   getMatchReport,
@@ -15,10 +15,10 @@ export default async function ReportesPage() {
   const session = await auth();
   if (!session?.user) redirect("/login");
 
-  const memberships = await getOrganizersByUser(session.user.id);
-  if (!memberships.length) redirect("/dashboard");
+  const membership = await getActiveMembership(session.user.id);
+  if (!membership) redirect("/dashboard");
 
-  const organizerId = memberships[0].organizerId;
+  const organizerId = membership.organizerId;
 
   const [registrations, matches, champions] = await Promise.all([
     getRegistrationReport(organizerId),

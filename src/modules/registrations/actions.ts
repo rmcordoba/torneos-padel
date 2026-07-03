@@ -6,8 +6,26 @@ import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 import { createAuditLog } from "@/modules/audit/actions";
 import { sendRegistrationEmail } from "@/lib/email";
+import { requirePermission, requireTournamentAccessByCategory, PermissionError } from "@/lib/permissions";
+import type { Prisma } from "@prisma/client";
+import {
+  parseWeekdayAvailability,
+  organizerRegistrationInputSchema,
+  playerRegistrationInputSchema,
+  registrationActionInputSchema,
+  waitlistActionInputSchema,
+} from "./validations";
 
 export type RegistrationActionState = { error: string } | null;
+
+// ─── Helper: lock pesimista sobre la categoría ────────────────────────────────
+// Serializa las escrituras concurrentes de una misma categoría para que el
+// chequeo de cupo + inserción sea atómico (sin esto, dos inscripciones
+// simultáneas pueden superar maxTeams).
+
+async function lockCategoryRow(tx: Prisma.TransactionClient, tournamentCategoryId: string): Promise<void> {
+  await tx.$queryRaw`SELECT id FROM tournament_categories WHERE id = ${tournamentCategoryId} FOR UPDATE`;
+}
 
 // ─── Helper: emails de los jugadores de un team ───────────────────────────────
 
@@ -68,24 +86,30 @@ async function findOrCreateTeam(
 async function promoteNextFromWaitlist(
   tournamentCategoryId: string
 ): Promise<void> {
-  const first = await prisma.waitlistEntry.findFirst({
-    where: { tournamentCategoryId },
-    orderBy: { position: "asc" },
+  // Selección + promoción atómicas (el lock evita promover dos veces la misma
+  // entrada si dos rechazos/cancelaciones llegan a la vez).
+  const first = await prisma.$transaction(async (tx) => {
+    await lockCategoryRow(tx, tournamentCategoryId);
+
+    const entry = await tx.waitlistEntry.findFirst({
+      where: { tournamentCategoryId },
+      orderBy: { position: "asc" },
+    });
+    if (!entry) return null;
+
+    await tx.registration.upsert({
+      where: { tournamentCategoryId_teamId: { tournamentCategoryId, teamId: entry.teamId } },
+      update: { status: "PENDING", weekdayAvailability: entry.weekdayAvailability, updatedAt: new Date() },
+      create: { tournamentCategoryId, teamId: entry.teamId, status: "PENDING", weekdayAvailability: entry.weekdayAvailability },
+    });
+    await tx.waitlistEntry.delete({ where: { id: entry.id } });
+    await tx.waitlistEntry.updateMany({
+      where: { tournamentCategoryId, position: { gt: entry.position } },
+      data: { position: { decrement: 1 } },
+    });
+    return entry;
   });
   if (!first) return;
-
-  await prisma.$transaction([
-    prisma.registration.upsert({
-      where: { tournamentCategoryId_teamId: { tournamentCategoryId, teamId: first.teamId } },
-      update: { status: "PENDING", updatedAt: new Date() },
-      create: { tournamentCategoryId, teamId: first.teamId, status: "PENDING" },
-    }),
-    prisma.waitlistEntry.delete({ where: { id: first.id } }),
-    prisma.waitlistEntry.updateMany({
-      where: { tournamentCategoryId, position: { gt: first.position } },
-      data: { position: { decrement: 1 } },
-    }),
-  ]);
 
   const [emails, info] = await Promise.all([
     getTeamEmails(first.teamId),
@@ -110,16 +134,26 @@ export async function createRegistrationByOrganizer(
   const session = await auth();
   if (!session?.user) return { error: "No autenticado" };
 
-  const player1Id = formData.get("player1Id") as string;
-  const player2Id = formData.get("player2Id") as string;
-  const tournamentCategoryId = formData.get("tournamentCategoryId") as string;
-  const returnPath = formData.get("returnPath") as string;
-
-  if (!player1Id || !player2Id || !tournamentCategoryId) {
+  const parsed = organizerRegistrationInputSchema.safeParse({
+    player1Id: formData.get("player1Id"),
+    player2Id: formData.get("player2Id"),
+    tournamentCategoryId: formData.get("tournamentCategoryId"),
+    returnPath: formData.get("returnPath"),
+  });
+  if (!parsed.success) {
     return { error: "Seleccioná ambos jugadores" };
   }
+  const { player1Id, player2Id, tournamentCategoryId, returnPath } = parsed.data;
+  const weekdayAvailability = parseWeekdayAvailability(formData);
+
   if (player1Id === player2Id) {
     return { error: "Los dos jugadores deben ser distintos" };
+  }
+
+  try {
+    await requireTournamentAccessByCategory(session.user.id, tournamentCategoryId, "MANAGE_REGISTRATIONS");
+  } catch (e) {
+    return { error: e instanceof PermissionError ? e.message : "Sin permisos" };
   }
 
   const tc = await prisma.tournamentCategory.findUnique({
@@ -130,50 +164,61 @@ export async function createRegistrationByOrganizer(
 
   const teamId = await findOrCreateTeam(player1Id, player2Id);
 
-  // ¿Ya inscriptos?
-  const existing = await prisma.registration.findUnique({
-    where: { tournamentCategoryId_teamId: { tournamentCategoryId, teamId } },
-  });
-  if (existing && existing.status !== "REJECTED" && existing.status !== "CANCELLED") {
-    return { error: "Esta pareja ya está inscripta o en lista de espera" };
-  }
+  // Chequeo de cupo + escritura de forma atómica (lock sobre la categoría)
+  const outcome = await prisma.$transaction(async (tx) => {
+    await lockCategoryRow(tx, tournamentCategoryId);
 
-  // Verificar cupo
-  const approved = await prisma.registration.count({
-    where: { tournamentCategoryId, status: "APPROVED" },
-  });
-  const isFull = approved >= tc.maxTeams;
-
-  if (isFull) {
-    // Agregar a lista de espera
-    const lastPos = await prisma.waitlistEntry.findFirst({
-      where: { tournamentCategoryId },
-      orderBy: { position: "desc" },
-      select: { position: true },
-    });
-
-    const existingWaitlist = await prisma.waitlistEntry.findUnique({
+    // ¿Ya inscriptos?
+    const existing = await tx.registration.findUnique({
       where: { tournamentCategoryId_teamId: { tournamentCategoryId, teamId } },
     });
-    if (existingWaitlist) return { error: "Esta pareja ya está en la lista de espera" };
+    if (existing && existing.status !== "REJECTED" && existing.status !== "CANCELLED") {
+      return { error: "Esta pareja ya está inscripta o en lista de espera" as string };
+    }
 
-    await prisma.waitlistEntry.create({
-      data: { tournamentCategoryId, teamId, position: (lastPos?.position ?? 0) + 1 },
+    // Verificar cupo
+    const approved = await tx.registration.count({
+      where: { tournamentCategoryId, status: "APPROVED" },
     });
-  } else {
+
+    if (approved >= tc.maxTeams) {
+      // Agregar a lista de espera
+      const existingWaitlist = await tx.waitlistEntry.findUnique({
+        where: { tournamentCategoryId_teamId: { tournamentCategoryId, teamId } },
+      });
+      if (existingWaitlist) return { error: "Esta pareja ya está en la lista de espera" as string };
+
+      const lastPos = await tx.waitlistEntry.findFirst({
+        where: { tournamentCategoryId },
+        orderBy: { position: "desc" },
+        select: { position: true },
+      });
+      await tx.waitlistEntry.create({
+        data: { tournamentCategoryId, teamId, position: (lastPos?.position ?? 0) + 1, weekdayAvailability },
+      });
+      return { waitlisted: true };
+    }
+
     // Inscripción directa aprobada
-    await prisma.registration.upsert({
+    await tx.registration.upsert({
       where: { tournamentCategoryId_teamId: { tournamentCategoryId, teamId } },
-      update: { status: "APPROVED", reviewedAt: new Date(), reviewedByUserId: session.user.id },
+      update: { status: "APPROVED", weekdayAvailability, reviewedAt: new Date(), reviewedByUserId: session.user.id },
       create: {
         tournamentCategoryId,
         teamId,
         status: "APPROVED",
+        weekdayAvailability,
         reviewedAt: new Date(),
         reviewedByUserId: session.user.id,
       },
     });
+    return { approved: true };
+  });
 
+  if ("error" in outcome && outcome.error) return { error: outcome.error };
+
+  // Audit best-effort fuera de la transacción (no anula la inscripción si falla)
+  if ("approved" in outcome && outcome.approved) {
     await createAuditLog({
       userId: session.user.id,
       tournamentId: tc.tournamentId,
@@ -188,31 +233,60 @@ export async function createRegistrationByOrganizer(
   return null;
 }
 
+// ─── Helper: verifica que el usuario puede gestionar la categoría de esa inscripción ──
+
+async function assertRegistrationAccess(userId: string, registrationId: string): Promise<boolean> {
+  const reg = await prisma.registration.findUnique({
+    where: { id: registrationId },
+    select: { tournamentCategoryId: true },
+  });
+  if (!reg) return false;
+  try {
+    await requireTournamentAccessByCategory(userId, reg.tournamentCategoryId, "MANAGE_REGISTRATIONS");
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 // ─── Aprobar inscripción pendiente ────────────────────────────────────────────
 
 export async function approveRegistration(formData: FormData): Promise<void> {
   const session = await auth();
   if (!session?.user) return;
 
-  const registrationId = formData.get("registrationId") as string;
-  const returnPath = formData.get("returnPath") as string;
-
-  const reg = await prisma.registration.findUnique({
-    where: { id: registrationId },
-    include: { tournamentCategory: { select: { maxTeams: true, tournamentId: true } } },
+  const parsed = registrationActionInputSchema.safeParse({
+    registrationId: formData.get("registrationId"),
+    returnPath: formData.get("returnPath"),
   });
-  if (!reg || reg.status !== "PENDING") return;
+  if (!parsed.success) return;
+  const { registrationId, returnPath } = parsed.data;
 
-  // Verificar cupo antes de aprobar
-  const approved = await prisma.registration.count({
-    where: { tournamentCategoryId: reg.tournamentCategoryId, status: "APPROVED" },
-  });
-  if (approved >= reg.tournamentCategory.maxTeams) return;
+  if (!await assertRegistrationAccess(session.user.id, registrationId)) return;
 
-  await prisma.registration.update({
-    where: { id: registrationId },
-    data: { status: "APPROVED", reviewedAt: new Date(), reviewedByUserId: session.user.id },
+  // Chequeo de cupo + aprobación atómicos (lock sobre la categoría)
+  const reg = await prisma.$transaction(async (tx) => {
+    const current = await tx.registration.findUnique({
+      where: { id: registrationId },
+      include: { tournamentCategory: { select: { maxTeams: true, tournamentId: true } } },
+    });
+    if (!current || current.status !== "PENDING") return null;
+
+    await lockCategoryRow(tx, current.tournamentCategoryId);
+
+    // Verificar cupo antes de aprobar
+    const approved = await tx.registration.count({
+      where: { tournamentCategoryId: current.tournamentCategoryId, status: "APPROVED" },
+    });
+    if (approved >= current.tournamentCategory.maxTeams) return null;
+
+    await tx.registration.update({
+      where: { id: registrationId },
+      data: { status: "APPROVED", reviewedAt: new Date(), reviewedByUserId: session.user.id },
+    });
+    return current;
   });
+  if (!reg) return;
 
   await createAuditLog({
     userId: session.user.id,
@@ -246,8 +320,14 @@ export async function rejectRegistration(formData: FormData): Promise<void> {
   const session = await auth();
   if (!session?.user) return;
 
-  const registrationId = formData.get("registrationId") as string;
-  const returnPath = formData.get("returnPath") as string;
+  const parsed = registrationActionInputSchema.safeParse({
+    registrationId: formData.get("registrationId"),
+    returnPath: formData.get("returnPath"),
+  });
+  if (!parsed.success) return;
+  const { registrationId, returnPath } = parsed.data;
+
+  if (!await assertRegistrationAccess(session.user.id, registrationId)) return;
 
   const reg = await prisma.registration.findUnique({
     where: { id: registrationId },
@@ -297,8 +377,14 @@ export async function cancelRegistration(formData: FormData): Promise<void> {
   const session = await auth();
   if (!session?.user) return;
 
-  const registrationId = formData.get("registrationId") as string;
-  const returnPath = formData.get("returnPath") as string;
+  const parsed = registrationActionInputSchema.safeParse({
+    registrationId: formData.get("registrationId"),
+    returnPath: formData.get("returnPath"),
+  });
+  if (!parsed.success) return;
+  const { registrationId, returnPath } = parsed.data;
+
+  if (!await assertRegistrationAccess(session.user.id, registrationId)) return;
 
   const reg = await prisma.registration.findUnique({
     where: { id: registrationId },
@@ -350,10 +436,13 @@ export async function createRegistrationByPlayer(
   const session = await auth();
   if (!session?.user) return { error: "Debés iniciar sesión para inscribirte" };
 
-  const tournamentCategoryId = formData.get("tournamentCategoryId") as string;
-  const partnerId = formData.get("partnerId") as string;
-
-  if (!partnerId) return { error: "Seleccioná tu compañero/a" };
+  const parsed = playerRegistrationInputSchema.safeParse({
+    tournamentCategoryId: formData.get("tournamentCategoryId"),
+    partnerId: formData.get("partnerId"),
+  });
+  if (!parsed.success) return { error: "Seleccioná tu compañero/a" };
+  const { tournamentCategoryId, partnerId } = parsed.data;
+  const weekdayAvailability = parseWeekdayAvailability(formData);
 
   const myProfile = await prisma.playerProfile.findFirst({
     where: { userId: session.user.id },
@@ -381,49 +470,59 @@ export async function createRegistrationByPlayer(
 
   const teamId = await findOrCreateTeam(myProfile.id, partnerId);
 
-  const existing = await prisma.registration.findUnique({
-    where: { tournamentCategoryId_teamId: { tournamentCategoryId, teamId } },
-  });
-  const existingWaitlist = await prisma.waitlistEntry.findUnique({
-    where: { tournamentCategoryId_teamId: { tournamentCategoryId, teamId } },
-  });
+  // Chequeo de duplicados + cupo + escritura de forma atómica.
+  // El redirect va afuera: lanza NEXT_REDIRECT y abortaría la transacción.
+  const outcome = await prisma.$transaction(async (tx) => {
+    await lockCategoryRow(tx, tournamentCategoryId);
 
-  if (
-    existingWaitlist ||
-    (existing && existing.status !== "REJECTED" && existing.status !== "CANCELLED")
-  ) {
-    return { error: "Esta pareja ya tiene una inscripción o está en lista de espera" };
-  }
-
-  const approved = await prisma.registration.count({
-    where: { tournamentCategoryId, status: "APPROVED" },
-  });
-
-  if (approved >= tc.maxTeams) {
-    const lastPos = await prisma.waitlistEntry.findFirst({
-      where: { tournamentCategoryId },
-      orderBy: { position: "desc" },
-      select: { position: true },
-    });
-    await prisma.waitlistEntry.create({
-      data: {
-        tournamentCategoryId,
-        teamId,
-        position: (lastPos?.position ?? 0) + 1,
-      },
-    });
-    revalidatePath(`/torneos/${tc.tournament.id}/categorias/${tournamentCategoryId}`);
-    redirect(`/torneos/${tc.tournament.id}/categorias/${tournamentCategoryId}?espera=1`);
-  } else {
-    await prisma.registration.upsert({
+    const existing = await tx.registration.findUnique({
       where: { tournamentCategoryId_teamId: { tournamentCategoryId, teamId } },
-      update: { status: "PENDING", updatedAt: new Date() },
-      create: { tournamentCategoryId, teamId, status: "PENDING" },
     });
-    revalidatePath(`/torneos/${tc.tournament.id}/categorias/${tournamentCategoryId}`);
-    redirect(`/torneos/${tc.tournament.id}/categorias/${tournamentCategoryId}?inscripto=1`);
-  }
-  return null;
+    const existingWaitlist = await tx.waitlistEntry.findUnique({
+      where: { tournamentCategoryId_teamId: { tournamentCategoryId, teamId } },
+    });
+
+    if (
+      existingWaitlist ||
+      (existing && existing.status !== "REJECTED" && existing.status !== "CANCELLED")
+    ) {
+      return { error: "Esta pareja ya tiene una inscripción o está en lista de espera" as string };
+    }
+
+    const approved = await tx.registration.count({
+      where: { tournamentCategoryId, status: "APPROVED" },
+    });
+
+    if (approved >= tc.maxTeams) {
+      const lastPos = await tx.waitlistEntry.findFirst({
+        where: { tournamentCategoryId },
+        orderBy: { position: "desc" },
+        select: { position: true },
+      });
+      await tx.waitlistEntry.create({
+        data: {
+          tournamentCategoryId,
+          teamId,
+          position: (lastPos?.position ?? 0) + 1,
+          weekdayAvailability,
+        },
+      });
+      return { waitlisted: true };
+    }
+
+    await tx.registration.upsert({
+      where: { tournamentCategoryId_teamId: { tournamentCategoryId, teamId } },
+      update: { status: "PENDING", weekdayAvailability, updatedAt: new Date() },
+      create: { tournamentCategoryId, teamId, status: "PENDING", weekdayAvailability },
+    });
+    return { registered: true };
+  });
+
+  if ("error" in outcome && outcome.error) return { error: outcome.error };
+
+  const basePath = `/torneos/${tc.tournament.id}/categorias/${tournamentCategoryId}`;
+  revalidatePath(basePath);
+  redirect(`${basePath}?${"waitlisted" in outcome && outcome.waitlisted ? "espera=1" : "inscripto=1"}`);
 }
 
 // ─── Aprobar todas las inscripciones pendientes ───────────────────────────────
@@ -435,31 +534,43 @@ export async function approveAllPending(
   const session = await auth();
   if (!session?.user) return { approved: 0, error: "No autenticado" };
 
+  try {
+    await requireTournamentAccessByCategory(session.user.id, tournamentCategoryId, "MANAGE_REGISTRATIONS");
+  } catch (e) {
+    return { approved: 0, error: e instanceof PermissionError ? e.message : "Sin permisos" };
+  }
+
   const tc = await prisma.tournamentCategory.findUnique({
     where: { id: tournamentCategoryId },
     select: { maxTeams: true, tournamentId: true },
   });
   if (!tc) return { approved: 0, error: "Categoría no encontrada" };
 
-  let approvedCount = await prisma.registration.count({
-    where: { tournamentCategoryId, status: "APPROVED" },
-  });
+  // Aprobación masiva atómica: o se aprueban todas las que entran en el cupo,
+  // o ninguna (y el lock evita carreras con otras inscripciones).
+  const count = await prisma.$transaction(async (tx) => {
+    await lockCategoryRow(tx, tournamentCategoryId);
 
-  const pending = await prisma.registration.findMany({
-    where: { tournamentCategoryId, status: "PENDING" },
-    orderBy: { createdAt: "asc" },
-  });
+    const approvedCount = await tx.registration.count({
+      where: { tournamentCategoryId, status: "APPROVED" },
+    });
+    const available = tc.maxTeams - approvedCount;
+    if (available <= 0) return 0;
 
-  let count = 0;
-  for (const reg of pending) {
-    if (approvedCount >= tc.maxTeams) break;
-    await prisma.registration.update({
-      where: { id: reg.id },
+    const pending = await tx.registration.findMany({
+      where: { tournamentCategoryId, status: "PENDING" },
+      orderBy: { createdAt: "asc" },
+      take: available,
+      select: { id: true },
+    });
+    if (pending.length === 0) return 0;
+
+    await tx.registration.updateMany({
+      where: { id: { in: pending.map((r) => r.id) } },
       data: { status: "APPROVED", reviewedAt: new Date(), reviewedByUserId: session.user.id },
     });
-    approvedCount++;
-    count++;
-  }
+    return pending.length;
+  });
 
   if (count > 0) {
     await createAuditLog({
@@ -485,29 +596,41 @@ export async function promoteAllWaitlist(
   const session = await auth();
   if (!session?.user) return { promoted: 0, error: "No autenticado" };
 
+  try {
+    await requireTournamentAccessByCategory(session.user.id, tournamentCategoryId, "MANAGE_REGISTRATIONS");
+  } catch (e) {
+    return { promoted: 0, error: e instanceof PermissionError ? e.message : "Sin permisos" };
+  }
+
   const tc = await prisma.tournamentCategory.findUnique({
     where: { id: tournamentCategoryId },
     select: { tournamentId: true },
   });
   if (!tc) return { promoted: 0, error: "Categoría no encontrada" };
 
-  const entries = await prisma.waitlistEntry.findMany({
-    where: { tournamentCategoryId },
-    orderBy: { position: "asc" },
-  });
-  if (entries.length === 0) return { promoted: 0 };
+  // Promoción atómica: upserts + vaciado de la lista en una sola transacción
+  const promoted = await prisma.$transaction(async (tx) => {
+    await lockCategoryRow(tx, tournamentCategoryId);
 
-  for (const entry of entries) {
-    await prisma.registration.upsert({
-      where: { tournamentCategoryId_teamId: { tournamentCategoryId, teamId: entry.teamId } },
-      update: { status: "PENDING", updatedAt: new Date() },
-      create: { tournamentCategoryId, teamId: entry.teamId, status: "PENDING" },
+    const entries = await tx.waitlistEntry.findMany({
+      where: { tournamentCategoryId },
+      orderBy: { position: "asc" },
     });
-  }
-  await prisma.waitlistEntry.deleteMany({ where: { tournamentCategoryId } });
+    if (entries.length === 0) return 0;
 
-  revalidatePath(returnPath);
-  return { promoted: entries.length };
+    for (const entry of entries) {
+      await tx.registration.upsert({
+        where: { tournamentCategoryId_teamId: { tournamentCategoryId, teamId: entry.teamId } },
+        update: { status: "PENDING", weekdayAvailability: entry.weekdayAvailability, updatedAt: new Date() },
+        create: { tournamentCategoryId, teamId: entry.teamId, status: "PENDING", weekdayAvailability: entry.weekdayAvailability },
+      });
+    }
+    await tx.waitlistEntry.deleteMany({ where: { tournamentCategoryId } });
+    return entries.length;
+  });
+
+  if (promoted > 0) revalidatePath(returnPath);
+  return { promoted };
 }
 
 // ─── Vaciar lista de espera ───────────────────────────────────────────────────
@@ -518,6 +641,12 @@ export async function clearWaitlist(
 ): Promise<{ cleared: number; error?: string }> {
   const session = await auth();
   if (!session?.user) return { cleared: 0, error: "No autenticado" };
+
+  try {
+    await requireTournamentAccessByCategory(session.user.id, tournamentCategoryId, "MANAGE_REGISTRATIONS");
+  } catch (e) {
+    return { cleared: 0, error: e instanceof PermissionError ? e.message : "Sin permisos" };
+  }
 
   const tc = await prisma.tournamentCategory.findUnique({
     where: { id: tournamentCategoryId },
@@ -531,17 +660,51 @@ export async function clearWaitlist(
   return { cleared: count };
 }
 
+// ─── Actualizar disponibilidad horaria de una inscripción ─────────────────────
+
+export async function updateRegistrationAvailability(
+  formData: FormData
+): Promise<void> {
+  const session = await auth();
+  if (!session?.user) return;
+
+  const parsed = registrationActionInputSchema.safeParse({
+    registrationId: formData.get("registrationId"),
+    returnPath: formData.get("returnPath"),
+  });
+  if (!parsed.success) return;
+  const { registrationId, returnPath } = parsed.data;
+  const weekdayAvailability = parseWeekdayAvailability(formData);
+
+  if (!await assertRegistrationAccess(session.user.id, registrationId)) return;
+
+  await prisma.registration.update({
+    where: { id: registrationId },
+    data: { weekdayAvailability },
+  });
+
+  revalidatePath(returnPath);
+}
+
 // ─── Quitar de lista de espera ────────────────────────────────────────────────
 
 export async function removeFromWaitlist(formData: FormData): Promise<void> {
   const session = await auth();
   if (!session?.user) return;
 
-  const waitlistEntryId = formData.get("waitlistEntryId") as string;
-  const returnPath = formData.get("returnPath") as string;
+  const parsed = waitlistActionInputSchema.safeParse({
+    waitlistEntryId: formData.get("waitlistEntryId"),
+    returnPath: formData.get("returnPath"),
+  });
+  if (!parsed.success) return;
+  const { waitlistEntryId, returnPath } = parsed.data;
 
   const entry = await prisma.waitlistEntry.findUnique({ where: { id: waitlistEntryId } });
   if (!entry) return;
+
+  try {
+    await requireTournamentAccessByCategory(session.user.id, entry.tournamentCategoryId, "MANAGE_REGISTRATIONS");
+  } catch { return; }
 
   await prisma.$transaction([
     prisma.waitlistEntry.delete({ where: { id: waitlistEntryId } }),

@@ -47,7 +47,7 @@ export function RegisterModal({ categoryId, categoryName, tournamentName, spotsL
       }}>
         <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between" }}>
           <div>
-            <h2 style={{ margin: 0, fontSize: 18, fontWeight: 700, color: "var(--text-primary)", fontFamily: "Space Grotesk, sans-serif" }}>
+            <h2 style={{ margin: 0, fontSize: 18, fontWeight: 700, color: "var(--text-primary)", fontFamily: "var(--font-space), sans-serif" }}>
               Inscribirse
             </h2>
             <p style={{ margin: "4px 0 0", fontSize: 13, color: "var(--text-dimmer)" }}>

@@ -26,10 +26,10 @@ export function CourtManager({ venueId, courts }: CourtManagerProps) {
   return (
     <div className="space-y-3">
       {courts.length === 0 && !showAdd && (
-        <div className="flex flex-col items-center py-10 text-center rounded-xl border border-dashed border-slate-200 bg-slate-50">
-          <Layers className="h-8 w-8 text-slate-200 mb-2" />
-          <p className="text-sm font-semibold text-slate-500">Sin canchas</p>
-          <p className="text-xs text-slate-400 mt-1">Agregá las canchas disponibles en esta sede.</p>
+        <div className="flex flex-col items-center py-10 text-center rounded-xl border border-dashed border-white/[0.1] bg-white/[0.02]">
+          <Layers className="h-8 w-8 text-white/10 mb-2" />
+          <p className="text-sm font-bold text-slate-400">Sin canchas</p>
+          <p className="text-xs text-slate-500 mt-1">Agregá las canchas disponibles en esta sede.</p>
         </div>
       )}
 
@@ -59,7 +59,7 @@ export function CourtManager({ venueId, courts }: CourtManagerProps) {
         <button
           type="button"
           onClick={() => setShowAdd(true)}
-          className="flex w-full items-center justify-center gap-2 rounded-xl border-2 border-dashed border-emerald-300 bg-emerald-50/50 py-3 text-sm font-semibold text-emerald-700 hover:bg-emerald-50 hover:border-emerald-400 transition-all"
+          className="flex w-full items-center justify-center gap-2 rounded-xl border border-dashed border-lime-400/40 bg-lime-400/[0.06] py-3 text-sm font-bold text-lime-400 hover:bg-lime-400/[0.12] hover:border-lime-400/60 transition-all"
         >
           <Plus className="h-4 w-4" /> Agregar cancha
         </button>
@@ -76,20 +76,20 @@ function CourtRow({
   const [deleting, setDeleting] = useState(false);
 
   return (
-    <li className="flex items-center gap-3 rounded-xl border border-slate-200 bg-white px-4 py-3">
-      <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-blue-50 text-blue-600">
+    <li className="flex items-center gap-3 rounded-xl border border-white/[0.07] bg-[rgba(10,18,38,0.6)] px-4 py-3">
+      <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-sky-500/15 border border-sky-500/30 text-sky-400">
         <Layers className="h-4 w-4" />
       </div>
       <div className="flex-1 min-w-0">
-        <p className="font-semibold text-sm text-slate-900">{court.name}</p>
+        <p className="font-bold text-sm text-slate-100">{court.name}</p>
         <div className="flex items-center gap-2 mt-0.5">
           {court.surface && (
-            <span className="text-xs text-slate-400 flex items-center gap-1">
+            <span className="text-xs text-slate-500 flex items-center gap-1">
               <Wind className="h-3 w-3" /> {court.surface}
             </span>
           )}
           {court.isIndoor && (
-            <span className="text-xs text-slate-400 flex items-center gap-1">
+            <span className="text-xs text-slate-500 flex items-center gap-1">
               <Home className="h-3 w-3" /> Cubierta
             </span>
           )}
@@ -99,7 +99,7 @@ function CourtRow({
         <button
           type="button"
           onClick={onEdit}
-          className="flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 hover:bg-slate-100 hover:text-slate-700 transition-colors"
+          className="flex h-8 w-8 items-center justify-center rounded-lg text-slate-500 hover:bg-white/[0.06] hover:text-slate-200 transition-colors"
         >
           <Pencil className="h-3.5 w-3.5" />
         </button>
@@ -110,7 +110,7 @@ function CourtRow({
             setDeleting(true);
             await deleteCourt(court.id, venueId);
           }}
-          className="flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 hover:bg-red-50 hover:text-red-600 transition-colors disabled:opacity-50"
+          className="flex h-8 w-8 items-center justify-center rounded-lg text-slate-500 hover:bg-rose-500/15 hover:text-rose-400 transition-colors disabled:opacity-50"
         >
           {deleting ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Trash2 className="h-3.5 w-3.5" />}
         </button>
@@ -134,17 +134,17 @@ function CourtEditRow({
   }, [isPending, state]);
 
   return (
-    <li className="rounded-xl border-2 border-emerald-200 bg-emerald-50/30 p-3">
+    <li className="rounded-xl border border-lime-400/25 bg-lime-400/[0.05] p-3">
       <form action={formAction} className="space-y-2">
         <input type="hidden" name="isIndoor" value={String(isIndoor)} />
         <CourtFields defaultValues={court} isIndoor={isIndoor} setIsIndoor={setIsIndoor} error={state?.fieldErrors?.name?.[0]} />
         <div className="flex justify-end gap-2">
           <button type="button" onClick={onDone}
-            className="h-8 px-3 rounded-lg text-xs font-semibold text-slate-600 hover:bg-slate-100 transition-colors">
+            className="h-8 px-3 rounded-lg text-xs font-bold text-slate-300 hover:bg-slate-100 transition-colors">
             Cancelar
           </button>
           <button type="submit" disabled={isPending}
-            className="flex items-center gap-1.5 h-8 px-3 rounded-lg bg-emerald-600 text-xs font-semibold text-white hover:bg-emerald-700 disabled:opacity-50 transition-colors">
+            className="flex items-center gap-1.5 h-8 px-3 rounded-lg bg-lime-400 text-xs font-extrabold text-[#080e1a] hover:bg-lime-300 shadow-[0_0_14px_rgba(163,230,53,0.25)] disabled:opacity-50 transition-colors">
             {isPending ? <Loader2 className="h-3 w-3 animate-spin" /> : <Check className="h-3 w-3" />}
             Guardar
           </button>
@@ -167,17 +167,17 @@ function CourtAddRow({ venueId, onDone }: { venueId: string; onDone: () => void 
   }, [isPending, state]);
 
   return (
-    <div className="rounded-xl border-2 border-emerald-200 bg-white p-3 space-y-2">
+    <div className="rounded-xl border border-lime-400/25 bg-[rgba(10,18,38,0.7)] p-3 space-y-2">
       <form action={formAction}>
         <input type="hidden" name="isIndoor" value={String(isIndoor)} />
         <CourtFields isIndoor={isIndoor} setIsIndoor={setIsIndoor} error={state?.fieldErrors?.name?.[0]} />
         <div className="flex justify-end gap-2 mt-2">
           <button type="button" onClick={onDone}
-            className="h-8 px-3 rounded-lg text-xs font-semibold text-slate-600 hover:bg-slate-100 transition-colors">
+            className="h-8 px-3 rounded-lg text-xs font-bold text-slate-300 hover:bg-slate-100 transition-colors">
             Cancelar
           </button>
           <button type="submit" disabled={isPending}
-            className="flex items-center gap-1.5 h-8 px-3 rounded-lg bg-emerald-600 text-xs font-semibold text-white hover:bg-emerald-700 disabled:opacity-50 transition-colors">
+            className="flex items-center gap-1.5 h-8 px-3 rounded-lg bg-lime-400 text-xs font-extrabold text-[#080e1a] hover:bg-lime-300 shadow-[0_0_14px_rgba(163,230,53,0.25)] disabled:opacity-50 transition-colors">
             {isPending ? <Loader2 className="h-3 w-3 animate-spin" /> : <Plus className="h-3 w-3" />}
             Agregar
           </button>
@@ -204,27 +204,27 @@ function CourtFields({
     <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 items-end">
       {/* Nombre */}
       <div className="sm:col-span-1 space-y-1">
-        <label className="text-xs font-semibold text-slate-600">Nombre</label>
+        <label className="text-xs font-bold text-slate-300">Nombre</label>
         <input
           name="name"
           defaultValue={defaultValues?.name ?? ""}
           placeholder="Cancha 1, Cancha A..."
           required
           className={cn(
-            "flex h-9 w-full rounded-lg border bg-white px-3 text-sm placeholder:text-slate-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500",
-            error ? "border-red-300" : "border-slate-200"
+            "flex h-9 w-full rounded-lg border bg-white/[0.05] text-slate-100 px-3 text-sm placeholder:text-slate-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-lime-400/40",
+            error ? "border-rose-500/40" : "border-white/[0.08]"
           )}
         />
-        {error && <p className="text-xs text-red-600">{error}</p>}
+        {error && <p className="text-xs text-rose-400">{error}</p>}
       </div>
 
       {/* Superficie */}
       <div className="space-y-1">
-        <label className="text-xs font-semibold text-slate-600">Superficie</label>
+        <label className="text-xs font-bold text-slate-300">Superficie</label>
         <select
           name="surface"
           defaultValue={defaultValues?.surface ?? ""}
-          className="flex h-9 w-full rounded-lg border border-slate-200 bg-white px-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500"
+          className="flex h-9 w-full rounded-lg border border-white/[0.08] bg-white/[0.05] text-slate-100 [color-scheme:dark] px-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-lime-400/40"
         >
           <option value="">Sin especificar</option>
           {SURFACES.map((s) => <option key={s} value={s}>{s}</option>)}
@@ -233,15 +233,15 @@ function CourtFields({
 
       {/* Cubierta toggle */}
       <div className="space-y-1">
-        <label className="text-xs font-semibold text-slate-600">Tipo</label>
+        <label className="text-xs font-bold text-slate-300">Tipo</label>
         <button
           type="button"
           onClick={() => setIsIndoor(!isIndoor)}
           className={cn(
             "flex h-9 w-full items-center justify-center gap-2 rounded-lg border text-xs font-semibold transition-colors",
             isIndoor
-              ? "border-blue-300 bg-blue-50 text-blue-700"
-              : "border-slate-200 bg-white text-slate-600 hover:bg-slate-50"
+              ? "border-sky-400/40 bg-sky-500/15 text-sky-400"
+              : "border-white/[0.08] bg-white/[0.04] text-slate-400 hover:bg-white/[0.07]"
           )}
         >
           {isIndoor ? <Home className="h-3.5 w-3.5" /> : <Wind className="h-3.5 w-3.5" />}

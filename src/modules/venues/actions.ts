@@ -4,16 +4,18 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { getOrganizersByUser } from "@/modules/organizers/queries";
+import { getActiveMembership } from "@/lib/active-organizer";
+import { requireWritable } from "@/lib/permissions";
 import { venueSchema, courtSchema } from "./validations";
 import { createAuditLog } from "@/modules/audit/actions";
 
 export type VenueActionState = { error?: string; fieldErrors?: Record<string, string[]> } | null;
 
 async function resolveOrganizerIdOrThrow(userId: string): Promise<string> {
-  const memberships = await getOrganizersByUser(userId);
-  if (!memberships.length) throw new Error("Sin organización");
-  return memberships[0].organizerId;
+  const membership = await getActiveMembership(userId);
+  if (!membership) throw new Error("Sin organización");
+  await requireWritable(membership.organizerId);
+  return membership.organizerId;
 }
 
 // ─── Venue ────────────────────────────────────────────────────────────────────

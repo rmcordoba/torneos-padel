@@ -23,17 +23,17 @@ export function RecalculateButton({ tableId }: { tableId: string }) {
         onClick={handleClick}
         disabled={isPending}
         style={{
-          display: "inline-flex", alignItems: "center", gap: 5,
-          padding: "6px 12px", borderRadius: 7,
-          background: "transparent", border: "1px solid var(--border-default)",
-          color: "var(--text-faint)", fontSize: 11, fontWeight: 600,
+          display: "inline-flex", alignItems: "center", gap: 6,
+          padding: "8px 14px", borderRadius: 9,
+          background: "rgba(163,230,53,0.1)", border: "1px solid rgba(163,230,53,0.25)",
+          color: "#a3e635", fontSize: 12, fontWeight: 700, fontFamily: "inherit",
           cursor: isPending ? "not-allowed" : "pointer", opacity: isPending ? 0.7 : 1,
         }}
       >
-        {isPending ? <Loader2 size={12} className="animate-spin" /> : <RefreshCw size={12} />}
+        {isPending ? <Loader2 size={13} className="animate-spin" /> : <RefreshCw size={13} />}
         Recalcular
       </button>
-      {error && <span style={{ fontSize: 11, color: "#ef4444" }}>{error}</span>}
+      {error && <span style={{ fontSize: 11, color: "#f87171" }}>{error}</span>}
     </div>
   );
 }

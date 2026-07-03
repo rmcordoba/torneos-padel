@@ -46,51 +46,65 @@ export default async function TorneoDetailPage({ params }: { params: Promise<{ i
   const st = STATUS_STYLE[tournament.status] ?? STATUS_STYLE.DRAFT;
 
   return (
-    <div style={{ maxWidth: 880, display: "flex", flexDirection: "column", gap: 24 }}>
+    <div style={{ maxWidth: 920, display: "flex", flexDirection: "column", gap: 22 }}>
       {/* Breadcrumb */}
       <nav style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 13 }}>
-        <Link href="/dashboard/torneos" style={{ display: "flex", alignItems: "center", gap: 4, color: "var(--text-faint)", textDecoration: "none" }}>
+        <Link href="/dashboard/torneos" style={{ display: "flex", alignItems: "center", gap: 4, color: "#475569", textDecoration: "none" }}>
           <ChevronLeft size={14} /> Torneos
         </Link>
-        <span style={{ color: "var(--border-strong)" }}>/</span>
-        <span style={{ fontWeight: 600, color: "var(--text-muted)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{tournament.name}</span>
+        <span style={{ color: "#334155" }}>/</span>
+        <span style={{ fontWeight: 700, color: "#94a3b8", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{tournament.name}</span>
       </nav>
 
       {/* Hero */}
-      <div style={{ background: "var(--bg-sidebar)", borderRadius: 12, border: "1px solid var(--border-subtle)", padding: "28px 32px", position: "relative", overflow: "hidden" }}>
-        {/* SVG bg */}
-        <svg style={{ position: "absolute", right: 0, bottom: 0, height: "100%", opacity: 0.06 }} viewBox="0 0 400 200" fill="none">
-          <rect x="20" y="20" width="360" height="160" stroke="var(--accent)" strokeWidth="2" />
-          <line x1="20" y1="100" x2="380" y2="100" stroke="var(--accent)" strokeWidth="3" />
-          <line x1="20" y1="62" x2="380" y2="62" stroke="var(--accent)" strokeWidth="1" />
-          <line x1="20" y1="138" x2="380" y2="138" stroke="var(--accent)" strokeWidth="1" />
-          <line x1="200" y1="62" x2="200" y2="138" stroke="var(--accent)" strokeWidth="1" />
+      <div style={{
+        borderRadius: 18,
+        border: `1px solid ${st.color}33`,
+        padding: "30px 32px",
+        position: "relative", overflow: "hidden",
+        background: `linear-gradient(135deg, ${st.color}1f 0%, rgba(10,18,38,0.85) 45%)`,
+        backdropFilter: "blur(16px)", WebkitBackdropFilter: "blur(16px)",
+        boxShadow: "0 8px 32px rgba(0,0,0,0.35)",
+      }}>
+        {/* SVG court bg */}
+        <svg style={{ position: "absolute", right: -20, bottom: -10, height: "120%", opacity: 0.08 }} viewBox="0 0 400 200" fill="none">
+          <rect x="20" y="20" width="360" height="160" stroke={st.color} strokeWidth="2" />
+          <line x1="20" y1="100" x2="380" y2="100" stroke={st.color} strokeWidth="3" />
+          <line x1="20" y1="62" x2="380" y2="62" stroke={st.color} strokeWidth="1" />
+          <line x1="20" y1="138" x2="380" y2="138" stroke={st.color} strokeWidth="1" />
+          <line x1="200" y1="62" x2="200" y2="138" stroke={st.color} strokeWidth="1" />
         </svg>
 
         <div style={{ position: "relative" }}>
           <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 16, flexWrap: "wrap" }}>
             <div>
-              <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
-                <span style={{ fontSize: 10, fontWeight: 700, padding: "3px 10px", borderRadius: 20, background: st.bg, color: st.color, border: `1px solid ${st.color}44` }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 12 }}>
+                <span style={{
+                  fontSize: 10, fontWeight: 800, padding: "4px 11px", borderRadius: 7,
+                  background: st.color, color: "#080e1a",
+                  letterSpacing: "0.04em", textTransform: "uppercase",
+                  display: "inline-flex", alignItems: "center", gap: 5,
+                }}>
+                  {tournament.status === "IN_PROGRESS" && <span className="vib-dot" style={{ width: 5, height: 5, borderRadius: "50%", background: "#080e1a" }} />}
                   {STATUS_LABEL[tournament.status]}
                 </span>
-                <span style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 11, color: tournament.isPublic ? "var(--accent)" : "var(--text-dimmer)" }}>
+                <span style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 11, fontWeight: 600, color: tournament.isPublic ? "#a3e635" : "#475569" }}>
                   {tournament.isPublic ? <Globe size={12} /> : <Lock size={12} />}
                   {tournament.isPublic ? "Público" : "Privado"}
                 </span>
               </div>
-              <h1 style={{ fontSize: 26, fontWeight: 800, color: "var(--text-primary)", fontFamily: "Space Grotesk, sans-serif" }}>{tournament.name}</h1>
+              <h1 style={{ fontSize: 30, fontWeight: 900, color: "#f8fafc", fontFamily: "var(--font-space), sans-serif", letterSpacing: "-0.02em", lineHeight: 1.1 }}>{tournament.name}</h1>
               {tournament.description && (
-                <p style={{ fontSize: 13, color: "var(--text-dimmer)", marginTop: 8, maxWidth: 480 }}>{tournament.description}</p>
+                <p style={{ fontSize: 13, color: "#64748b", marginTop: 8, maxWidth: 480 }}>{tournament.description}</p>
               )}
-              <p style={{ fontSize: 12, color: "var(--accent)", marginTop: 10, fontWeight: 600, textTransform: "capitalize" }}>
-                📅 {startFmt} → {endFmt}
+              <p style={{ fontSize: 12, color: "#94a3b8", marginTop: 12, fontWeight: 600, textTransform: "capitalize", display: "flex", alignItems: "center", gap: 6 }}>
+                <Calendar size={13} color={st.color} /> {startFmt} → {endFmt}
               </p>
             </div>
 
             <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
               <StatusActions tournamentId={tournament.id} status={tournament.status as TournamentStatus} />
-              <Link href={`/dashboard/torneos/${tournament.id}/editar`} style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "7px 14px", borderRadius: 8, background: "rgba(255,255,255,0.08)", border: "1px solid rgba(255,255,255,0.12)", color: "var(--text-muted)", fontSize: 12, fontWeight: 600, textDecoration: "none" }}>
+              <Link href={`/dashboard/torneos/${tournament.id}/editar`} style={{ display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 6, padding: "8px 14px", borderRadius: 9, background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.12)", color: "#cbd5e1", fontSize: 12, fontWeight: 700, textDecoration: "none" }}>
                 <Settings2 size={13} /> Editar
               </Link>
             </div>
@@ -100,73 +114,86 @@ export default async function TorneoDetailPage({ params }: { params: Promise<{ i
 
       {/* Categorías */}
       <div>
-        <h2 style={{ fontSize: 14, fontWeight: 700, color: "var(--text-primary)", marginBottom: 12, display: "flex", alignItems: "center", gap: 8, fontFamily: "Space Grotesk, sans-serif" }}>
-          <Users size={15} color="var(--accent)" /> Categorías ({tournament.categories.length})
+        <h2 style={{ fontSize: 15, fontWeight: 800, color: "#f8fafc", marginBottom: 14, display: "flex", alignItems: "center", gap: 8, fontFamily: "var(--font-space), sans-serif" }}>
+          <Users size={16} color="#a3e635" /> Categorías
+          <span style={{ fontSize: 12, fontWeight: 700, color: "#a3e635", background: "rgba(163,230,53,0.1)", border: "1px solid rgba(163,230,53,0.22)", padding: "2px 9px", borderRadius: 100 }}>
+            {tournament.categories.length}
+          </span>
         </h2>
 
         {tournament.categories.length === 0 ? (
-          <div style={{ borderRadius: 12, border: "1px dashed var(--border-strong)", padding: "48px 24px", textAlign: "center" }}>
-            <Users size={36} color="var(--border-strong)" style={{ margin: "0 auto 12px" }} />
-            <p style={{ fontSize: 13, color: "var(--text-faint)" }}>Sin categorías configuradas.</p>
+          <div style={{ borderRadius: 18, border: "1px dashed rgba(255,255,255,0.1)", background: "rgba(255,255,255,0.02)", padding: "48px 24px", textAlign: "center" }}>
+            <Users size={36} color="#334155" style={{ margin: "0 auto 12px" }} />
+            <p style={{ fontSize: 13, color: "#475569" }}>Sin categorías configuradas.</p>
           </div>
         ) : (
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(340px, 1fr))", gap: 12 }}>
-            {tournament.categories.map((tc) => {
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(340px, 1fr))", gap: 14 }}>
+            {tournament.categories.map((tc, ci) => {
               const cst = STATUS_STYLE[tc.status] ?? STATUS_STYLE.DRAFT;
               return (
-                <div key={tc.id} style={{ background: "var(--bg-surface)", borderRadius: 12, border: "1px solid var(--border-default)", overflow: "hidden" }}>
+                <div key={tc.id} className={`vib-in card-d${Math.min(ci, 5)}`} style={{
+                  background: "rgba(12,20,40,0.7)",
+                  backdropFilter: "blur(16px)", WebkitBackdropFilter: "blur(16px)",
+                  borderRadius: 16, border: "1px solid rgba(255,255,255,0.07)",
+                  overflow: "hidden",
+                  boxShadow: "0 4px 20px rgba(0,0,0,0.3)",
+                }}>
                   {/* Header — clickable to inscripciones */}
-                  <Link href={`/dashboard/torneos/${tournament.id}/categorias/${tc.id}`} style={{ display: "block", padding: "16px 18px", textDecoration: "none", borderBottom: "1px solid var(--border-subtle)" }}>
+                  <Link href={`/dashboard/torneos/${tournament.id}/categorias/${tc.id}`} style={{
+                    display: "block", padding: "16px 18px", textDecoration: "none",
+                    borderBottom: "1px solid rgba(255,255,255,0.06)",
+                    background: `linear-gradient(135deg, ${cst.color}14 0%, transparent 60%)`,
+                  }}>
                     <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
                       <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                        <div style={{ width: 38, height: 38, borderRadius: 9, background: "var(--accent-15)", border: "1px solid var(--accent-30)", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                          <Trophy size={16} color="var(--accent)" />
+                        <div style={{ width: 40, height: 40, borderRadius: 11, background: `${cst.color}1f`, border: `1px solid ${cst.color}40`, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                          <Trophy size={17} color={cst.color} />
                         </div>
                         <div>
-                          <p style={{ fontSize: 14, fontWeight: 700, color: "var(--text-primary)" }}>{tc.category.name}</p>
-                          <p style={{ fontSize: 11, color: "var(--text-dimmer)", marginTop: 2 }}>{FORMAT_LABEL[tc.format] ?? tc.format}</p>
+                          <p style={{ fontSize: 15, fontWeight: 800, color: "#f8fafc", fontFamily: "var(--font-space), sans-serif" }}>{tc.category.name}</p>
+                          <p style={{ fontSize: 11, color: "#475569", marginTop: 2 }}>{FORMAT_LABEL[tc.format] ?? tc.format}</p>
                         </div>
                       </div>
-                      <span style={{ fontSize: 10, fontWeight: 700, padding: "2px 8px", borderRadius: 20, background: cst.bg, color: cst.color, border: `1px solid ${cst.color}44`, whiteSpace: "nowrap" }}>
+                      <span style={{ fontSize: 9, fontWeight: 800, padding: "3px 9px", borderRadius: 7, background: cst.bg, color: cst.color, border: `1px solid ${cst.color}44`, whiteSpace: "nowrap", textTransform: "uppercase", letterSpacing: "0.04em" }}>
                         {STATUS_LABEL[tc.status] ?? tc.status}
                       </span>
                     </div>
                   </Link>
 
                   {/* Stats */}
-                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", borderBottom: "1px solid var(--border-subtle)" }}>
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
                     {[
-                      { icon: <Users size={12} />, label: "Cupo", val: `${tc.maxTeams} par.` },
-                      { icon: <Swords size={12} />, label: "Partido", val: `${tc.setsPerMatch}×${tc.gamesPerSet}` },
-                      { icon: <BarChart2 size={12} />, label: "Precio", val: tc.pricePerTeam ? `$${tc.pricePerTeam}` : "Gratis" },
+                      { icon: <Users size={13} />, label: "Cupo", val: `${tc.maxTeams}`, color: "#38bdf8" },
+                      { icon: <Swords size={13} />, label: "Sets×Games", val: `${tc.setsPerMatch}×${tc.gamesPerSet}`, color: "#a78bfa" },
+                      { icon: <BarChart2 size={13} />, label: "Precio", val: tc.pricePerTeam ? `$${tc.pricePerTeam}` : "Gratis", color: "#a3e635" },
                     ].map((s, i) => (
-                      <div key={i} style={{ padding: "10px 12px", textAlign: "center", borderRight: i < 2 ? "1px solid var(--border-subtle)" : "none" }}>
-                        <div style={{ display: "flex", justifyContent: "center", color: "var(--text-darkest)", marginBottom: 2 }}>{s.icon}</div>
-                        <p style={{ fontSize: 12, fontWeight: 700, color: "var(--text-secondary)" }}>{s.val}</p>
-                        <p style={{ fontSize: 10, color: "var(--text-dimmer)" }}>{s.label}</p>
+                      <div key={i} style={{ padding: "12px", textAlign: "center", borderRight: i < 2 ? "1px solid rgba(255,255,255,0.06)" : "none" }}>
+                        <div style={{ display: "flex", justifyContent: "center", color: s.color, marginBottom: 4, opacity: 0.7 }}>{s.icon}</div>
+                        <p className="vib-score" style={{ fontSize: 16, color: "#f1f5f9" }}>{s.val}</p>
+                        <p style={{ fontSize: 9, color: "#475569", textTransform: "uppercase", letterSpacing: "0.04em", marginTop: 3, fontWeight: 700 }}>{s.label}</p>
                       </div>
                     ))}
                   </div>
 
                   {/* Actions */}
-                  <div style={{ display: "flex", padding: "10px 12px", gap: 8 }}>
-                    <Link href={`/dashboard/torneos/${tournament.id}/categorias/${tc.id}`} style={{ flex: 1, display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 5, padding: "7px 0", borderRadius: 7, background: "var(--bg-elevated)", border: "1px solid var(--border-default)", color: "var(--text-faint)", fontSize: 11, fontWeight: 600, textDecoration: "none" }}>
-                      <ClipboardList size={12} /> Inscripciones
-                    </Link>
-                    <Link href={`/dashboard/torneos/${tournament.id}/categorias/${tc.id}/fixture`} style={{ flex: 1, display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 5, padding: "7px 0", borderRadius: 7, background: "var(--bg-elevated)", border: "1px solid var(--border-default)", color: "var(--text-faint)", fontSize: 11, fontWeight: 600, textDecoration: "none" }}>
-                      <Swords size={12} /> Fixture
-                    </Link>
-                    <Link href="/dashboard/calendario" style={{ flex: 1, display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 5, padding: "7px 0", borderRadius: 7, background: "var(--bg-elevated)", border: "1px solid var(--border-default)", color: "var(--text-faint)", fontSize: 11, fontWeight: 600, textDecoration: "none" }}>
-                      <Calendar size={12} /> Agenda
-                    </Link>
+                  <div style={{ display: "flex", padding: "12px", gap: 8 }}>
+                    {[
+                      { href: `/dashboard/torneos/${tournament.id}/categorias/${tc.id}`, icon: <ClipboardList size={13} />, label: "Inscripciones" },
+                      { href: `/dashboard/torneos/${tournament.id}/categorias/${tc.id}/fixture`, icon: <Swords size={13} />, label: "Fixture" },
+                      { href: "/dashboard/calendario", icon: <Calendar size={13} />, label: "Agenda" },
+                    ].map((a) => (
+                      <Link key={a.label} href={a.href} style={{ flex: 1, display: "inline-flex", alignItems: "center", justifyContent: "center", gap: 5, padding: "8px 0", borderRadius: 9, background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.07)", color: "#94a3b8", fontSize: 11, fontWeight: 700, textDecoration: "none" }}>
+                        {a.icon} {a.label}
+                      </Link>
+                    ))}
                   </div>
 
                   {/* Secondary actions: edit + delete */}
-                  <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", padding: "0 12px 10px", gap: 6 }}>
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", padding: "0 12px 12px", gap: 6 }}>
                     <Link
                       href={`/dashboard/torneos/${tournament.id}/categorias/${tc.id}/editar`}
                       title="Editar categoría"
-                      style={{ display: "inline-flex", alignItems: "center", gap: 4, padding: "4px 10px", borderRadius: 6, border: "1px solid var(--border-subtle)", background: "transparent", color: "var(--text-dimmer)", fontSize: 11, fontWeight: 600, textDecoration: "none" }}
+                      style={{ display: "inline-flex", alignItems: "center", gap: 4, padding: "5px 11px", borderRadius: 7, border: "1px solid rgba(255,255,255,0.07)", background: "transparent", color: "#64748b", fontSize: 11, fontWeight: 700, textDecoration: "none" }}
                     >
                       <Pencil size={11} /> Editar
                     </Link>

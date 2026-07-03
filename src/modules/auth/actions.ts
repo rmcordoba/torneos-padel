@@ -6,13 +6,24 @@ import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { loginSchema, registerSchema, forgotPasswordSchema, resetPasswordSchema, changePasswordSchema } from "./validations";
 import { sendPasswordResetEmail } from "@/lib/email";
+import { rateLimitByIp } from "@/lib/rate-limit";
 import bcrypt from "bcryptjs";
-import { randomBytes } from "crypto";
+import { randomBytes, createHash } from "crypto";
+
+// Los tokens de reset se guardan hasheados (SHA-256): si alguien lee la DB
+// no puede usarlos. El token en claro solo viaja en el email al usuario.
+function hashToken(token: string): string {
+  return createHash("sha256").update(token).digest("hex");
+}
 
 export type ActionState = {
   error?: string;
   fieldErrors?: Record<string, string[]>;
 } | null;
+
+export async function loginWithGoogle() {
+  await signIn("google", { redirectTo: "/dashboard" });
+}
 
 export async function login(
   _prev: ActionState,
@@ -23,6 +34,11 @@ export async function login(
 
   if (!parsed.success) {
     return { fieldErrors: parsed.error.flatten().fieldErrors };
+  }
+
+  // Máx. 10 intentos de login por IP cada 5 minutos
+  if (!(await rateLimitByIp("login", 10, 5 * 60 * 1000))) {
+    return { error: "Demasiados intentos. Esperá unos minutos y volvé a intentar." };
   }
 
   try {
@@ -54,6 +70,11 @@ export async function register(
 
   if (!parsed.success) {
     return { fieldErrors: parsed.error.flatten().fieldErrors };
+  }
+
+  // Máx. 5 registros por IP por hora (frena creación masiva de cuentas)
+  if (!(await rateLimitByIp("register", 5, 60 * 60 * 1000))) {
+    return { error: "Demasiados intentos. Esperá unos minutos y volvé a intentar." };
   }
 
   const { email, password, firstName, lastName } = parsed.data;
@@ -98,6 +119,11 @@ export async function forgotPassword(
   const parsed = forgotPasswordSchema.safeParse({ email: formData.get("email") });
   if (!parsed.success) return { fieldErrors: parsed.error.flatten().fieldErrors };
 
+  // Máx. 3 solicitudes de reset por IP cada 15 minutos (frena spam de emails)
+  if (!(await rateLimitByIp("forgot-password", 3, 15 * 60 * 1000))) {
+    return { error: "Demasiadas solicitudes. Esperá unos minutos y volvé a intentar." };
+  }
+
   const user = await prisma.user.findUnique({
     where: { email: parsed.data.email },
     select: { id: true, name: true, email: true },
@@ -111,8 +137,9 @@ export async function forgotPassword(
     const token = randomBytes(32).toString("hex");
     const expiresAt = new Date(Date.now() + 60 * 60 * 1000); // 1 hora
 
+    // Se persiste el hash, no el token en claro
     await prisma.passwordResetToken.create({
-      data: { userId: user.id, token, expiresAt },
+      data: { userId: user.id, token: hashToken(token), expiresAt },
     });
 
     const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
@@ -139,8 +166,13 @@ export async function resetPassword(
   });
   if (!parsed.success) return { fieldErrors: parsed.error.flatten().fieldErrors };
 
+  // Máx. 10 intentos de canje de token por IP cada 15 minutos
+  if (!(await rateLimitByIp("reset-password", 10, 15 * 60 * 1000))) {
+    return { error: "Demasiados intentos. Esperá unos minutos y volvé a intentar." };
+  }
+
   const record = await prisma.passwordResetToken.findUnique({
-    where: { token: parsed.data.token },
+    where: { token: hashToken(parsed.data.token) },
     include: { user: { select: { id: true } } },
   });
 

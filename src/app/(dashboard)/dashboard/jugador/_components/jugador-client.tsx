@@ -79,7 +79,7 @@ export function JugadorClient({ openTournaments, myRegistrations, hasProfile, us
 
       {/* Welcome */}
       <div>
-        <h1 style={{ margin: 0, fontSize: 26, fontWeight: 800, color: "var(--text-primary)", fontFamily: "Space Grotesk, sans-serif" }}>
+        <h1 style={{ margin: 0, fontSize: 26, fontWeight: 800, color: "var(--text-primary)", fontFamily: "var(--font-space), sans-serif" }}>
           ¡Hola, {firstName}! 👋
         </h1>
         <p style={{ margin: "6px 0 0", fontSize: 14, color: "var(--text-dimmer)" }}>
@@ -117,7 +117,7 @@ export function JugadorClient({ openTournaments, myRegistrations, hasProfile, us
       {/* My registrations */}
       <section>
         <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 14 }}>
-          <span style={{ fontSize: 16, fontWeight: 700, color: "var(--text-primary)", fontFamily: "Space Grotesk, sans-serif" }}>Mis inscripciones</span>
+          <span style={{ fontSize: 16, fontWeight: 700, color: "var(--text-primary)", fontFamily: "var(--font-space), sans-serif" }}>Mis inscripciones</span>
           {myRegistrations.length > 0 && (
             <span style={{ fontSize: 11, fontWeight: 700, color: "var(--accent)", background: "var(--accent-15)", padding: "2px 8px", borderRadius: 20 }}>
               {myRegistrations.length}
@@ -157,7 +157,7 @@ export function JugadorClient({ openTournaments, myRegistrations, hasProfile, us
                   </div>
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 3 }}>
-                      <span style={{ fontWeight: 700, fontSize: 13, color: "var(--text-primary)", fontFamily: "Space Grotesk, sans-serif" }}>
+                      <span style={{ fontWeight: 700, fontSize: 13, color: "var(--text-primary)", fontFamily: "var(--font-space), sans-serif" }}>
                         {reg.tournamentName}
                       </span>
                       <span style={{
@@ -172,7 +172,7 @@ export function JugadorClient({ openTournaments, myRegistrations, hasProfile, us
                       <span>{reg.categoryName}</span>
                       {reg.partnerName && <span>· Compañero/a: {reg.partnerName}</span>}
                       <span style={{ color: "var(--text-faint)" }}>
-                        · {new Date(reg.startDate).toLocaleDateString("es-AR", { day: "numeric", month: "short", year: "numeric" })}
+                        · {reg.startDate}
                       </span>
                     </div>
                   </div>
@@ -186,7 +186,7 @@ export function JugadorClient({ openTournaments, myRegistrations, hasProfile, us
       {/* Open tournaments */}
       <section>
         <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 14 }}>
-          <span style={{ fontSize: 16, fontWeight: 700, color: "var(--text-primary)", fontFamily: "Space Grotesk, sans-serif" }}>Torneos con inscripciones abiertas</span>
+          <span style={{ fontSize: 16, fontWeight: 700, color: "var(--text-primary)", fontFamily: "var(--font-space), sans-serif" }}>Torneos con inscripciones abiertas</span>
           {openTournaments.length > 0 && (
             <span style={{ fontSize: 11, fontWeight: 700, color: "#60a5fa", background: "rgba(96,165,250,0.12)", padding: "2px 8px", borderRadius: 20 }}>
               {openTournaments.length}
@@ -222,7 +222,7 @@ export function JugadorClient({ openTournaments, myRegistrations, hasProfile, us
                   <div>
                     <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 4 }}>
                       <Trophy size={14} color="var(--accent)" />
-                      <span style={{ fontWeight: 700, fontSize: 15, color: "var(--text-primary)", fontFamily: "Space Grotesk, sans-serif" }}>
+                      <span style={{ fontWeight: 700, fontSize: 15, color: "var(--text-primary)", fontFamily: "var(--font-space), sans-serif" }}>
                         {t.name}
                       </span>
                     </div>
@@ -232,9 +232,7 @@ export function JugadorClient({ openTournaments, myRegistrations, hasProfile, us
                       </span>
                       <span style={{ display: "flex", alignItems: "center", gap: 5 }}>
                         <Calendar size={11} />
-                        {new Date(t.startDate).toLocaleDateString("es-AR", { day: "numeric", month: "short" })}
-                        {" – "}
-                        {new Date(t.endDate).toLocaleDateString("es-AR", { day: "numeric", month: "short", year: "numeric" })}
+                        {t.startDate} – {t.endDate}
                       </span>
                     </div>
                   </div>

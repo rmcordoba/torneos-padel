@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { auth } from "@/lib/auth";
-import { getOrganizersByUser } from "@/modules/organizers/queries";
+import { getActiveMembership } from "@/lib/active-organizer";
 import { getOrganizerForTournamentForm } from "@/modules/organizers/queries";
 import { TournamentForm } from "./_components/tournament-form";
 import { ChevronLeft, Trophy } from "lucide-react";
@@ -13,10 +13,10 @@ export default async function NuevoTorneoPage() {
   const session = await auth();
   if (!session?.user) redirect("/login");
 
-  const memberships = await getOrganizersByUser(session.user.id);
-  if (memberships.length === 0) redirect("/dashboard");
+  const membership = await getActiveMembership(session.user.id);
+  if (!membership) redirect("/dashboard");
 
-  const organizer = await getOrganizerForTournamentForm(memberships[0].organizer.id);
+  const organizer = await getOrganizerForTournamentForm(membership.organizer.id);
   if (!organizer) redirect("/dashboard");
 
   const defaults = organizer.settings ?? {

@@ -1,9 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import type { FormatEngine } from "./types";
-
-function nextPow2(n: number): number {
-  return Math.pow(2, Math.ceil(Math.log2(Math.max(n, 2))));
-}
+import { nextPow2, seedIntoBracket, winnerSideFromSets } from "./logic";
 
 export class SingleEliminationEngine implements FormatEngine {
   async generateStructure(
@@ -52,10 +49,12 @@ export class SingleEliminationEngine implements FormatEngine {
         }
       }
 
-      // Seed teams into first-round nodes
-      // Each node at round=numRounds gets two team slots; missing slot = bye
+      // Seed teams into first-round nodes using standard bracket seeding:
+      // teamIds ordered by seed (index 0 = best). Byes fall to the top seeds
+      // and seeds 1 & 2 can only meet in the final.
       const firstRound = numRounds;
       const firstRoundCount = Math.pow(2, numRounds - 1);
+      const slots = seedIntoBracket(teamIds, bracketSize);
       let matchNumber = 1;
 
       // Track which parent positions have a bye child (to detect double-byes)
@@ -63,8 +62,8 @@ export class SingleEliminationEngine implements FormatEngine {
 
       for (let pos = 1; pos <= firstRoundCount; pos++) {
         const nodeId = nodeGrid[firstRound][pos];
-        const team1 = teamIds[(pos - 1) * 2] ?? null;
-        const team2 = teamIds[(pos - 1) * 2 + 1] ?? null;
+        const team1 = slots[(pos - 1) * 2];
+        const team2 = slots[(pos - 1) * 2 + 1];
         const parentPos = Math.ceil(pos / 2);
 
         if (!team1) continue;
@@ -141,24 +140,14 @@ export class SingleEliminationEngine implements FormatEngine {
     if (!match) return null;
 
     const { setsPerMatch } = match.stage.tournamentCategory;
-    const setsToWin = Math.ceil(setsPerMatch / 2);
 
-    const wins: Record<string, number> = {};
     const side1Team = match.teams.find((t) => t.side === 1);
     const side2Team = match.teams.find((t) => t.side === 2);
     if (!side1Team || !side2Team) return null;
 
-    for (const set of match.sets) {
-      if (set.games1 > set.games2) {
-        wins[side1Team.teamId] = (wins[side1Team.teamId] ?? 0) + 1;
-      } else if (set.games2 > set.games1) {
-        wins[side2Team.teamId] = (wins[side2Team.teamId] ?? 0) + 1;
-      }
-    }
-
-    for (const [teamId, count] of Object.entries(wins)) {
-      if (count >= setsToWin) return teamId;
-    }
+    const winnerSide = winnerSideFromSets(match.sets, setsPerMatch);
+    if (winnerSide === 1) return side1Team.teamId;
+    if (winnerSide === 2) return side2Team.teamId;
     return null;
   }
 

@@ -38,7 +38,7 @@ export function ResetPasswordForm({ token }: { token: string }) {
             Tu contraseña fue restablecida correctamente. Ya podés iniciar sesión.
           </p>
         </div>
-        <Link href="/login" style={{ width: "100%", height: 44, borderRadius: 10, border: "none", background: "#a3e635", color: "#0a0f0a", fontSize: 14, fontWeight: 700, fontFamily: "Space Grotesk, sans-serif", display: "flex", alignItems: "center", justifyContent: "center", textDecoration: "none" }}>
+        <Link href="/login" style={{ width: "100%", height: 44, borderRadius: 10, border: "none", background: "#a3e635", color: "#0a0f0a", fontSize: 14, fontWeight: 700, fontFamily: "var(--font-space), sans-serif", display: "flex", alignItems: "center", justifyContent: "center", textDecoration: "none" }}>
           Ir al login
         </Link>
       </div>
@@ -86,7 +86,7 @@ export function ResetPasswordForm({ token }: { token: string }) {
 
       <button
         type="submit" disabled={isPending}
-        style={{ width: "100%", height: 44, borderRadius: 10, border: "none", background: "#a3e635", color: "#0a0f0a", fontSize: 14, fontWeight: 700, cursor: isPending ? "not-allowed" : "pointer", opacity: isPending ? 0.6 : 1, fontFamily: "Space Grotesk, sans-serif", display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}
+        style={{ width: "100%", height: 44, borderRadius: 10, border: "none", background: "#a3e635", color: "#0a0f0a", fontSize: 14, fontWeight: 700, cursor: isPending ? "not-allowed" : "pointer", opacity: isPending ? 0.6 : 1, fontFamily: "var(--font-space), sans-serif", display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}
       >
         {isPending ? <><Loader2 size={16} className="animate-spin" /> Guardando...</> : "Restablecer contraseña"}
       </button>

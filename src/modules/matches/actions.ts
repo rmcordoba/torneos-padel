@@ -4,8 +4,10 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { getActiveMembership } from "@/lib/active-organizer";
 import { getFormatEngine } from "./engine";
 import { createAuditLog } from "@/modules/audit/actions";
+import { requireTournamentAccessByCategory, requireTournamentAccessByMatch, PermissionError } from "@/lib/permissions";
 
 export type MatchActionState = { error: string } | null;
 
@@ -17,16 +19,27 @@ export async function classifyToPlayoff(
   const session = await auth();
   if (!session?.user) return { error: "No autenticado" };
 
-  const membership = await prisma.userOrganizer.findFirst({
-    where: { userId: session.user.id, isActive: true },
+  // Resolve the tournamentCategoryId from the stage first for access check
+  const stageCheck = await prisma.stage.findUnique({
+    where: { id: groupStageId },
+    select: { tournamentCategoryId: true },
   });
+  if (!stageCheck) return { error: "Etapa no válida" };
+
+  try {
+    await requireTournamentAccessByCategory(session.user.id, stageCheck.tournamentCategoryId, "MANAGE_RESULTS");
+  } catch (e) {
+    return { error: e instanceof PermissionError ? e.message : "Sin permisos" };
+  }
+
+  // Organizador activo (cookie), no una membresía arbitraria: para usuarios
+  // multi-club el scope debe coincidir con el club sobre el que operan.
+  // Memoizado por request: es la misma consulta que ya hizo el access check.
+  const membership = await getActiveMembership(session.user.id);
   if (!membership) return { error: "Sin permisos" };
 
   const stage = await prisma.stage.findFirst({
-    where: {
-      id: groupStageId,
-      tournamentCategory: { tournament: { organizerId: membership.organizerId } },
-    },
+    where: { id: groupStageId },
     include: {
       tournamentCategory: true,
       groups: {
@@ -64,9 +77,16 @@ export async function generateFixture(
   const session = await auth();
   if (!session?.user) return { error: "No autenticado" };
 
-  const membership = await prisma.userOrganizer.findFirst({
-    where: { userId: session.user.id, isActive: true },
-  });
+  try {
+    await requireTournamentAccessByCategory(session.user.id, tournamentCategoryId, "MANAGE_TOURNAMENTS");
+  } catch (e) {
+    return { error: e instanceof PermissionError ? e.message : "Sin permisos" };
+  }
+
+  // Organizador activo (cookie), no una membresía arbitraria: para usuarios
+  // multi-club el scope debe coincidir con el club sobre el que operan.
+  // Memoizado por request: es la misma consulta que ya hizo el access check.
+  const membership = await getActiveMembership(session.user.id);
   if (!membership) return { error: "Sin permisos" };
 
   const tc = await prisma.tournamentCategory.findFirst({
@@ -112,11 +132,6 @@ export async function recordMatchResult(
   const session = await auth();
   if (!session?.user) return { error: "No autenticado" };
 
-  const membership = await prisma.userOrganizer.findFirst({
-    where: { userId: session.user.id, isActive: true },
-  });
-  if (!membership) return { error: "Sin permisos" };
-
   const matchId = formData.get("matchId") as string;
   const returnPath = formData.get("returnPath") as string;
   const isWalkover = formData.get("isWalkover") === "true";
@@ -145,11 +160,20 @@ export async function recordMatchResult(
     return { error: "Ingresá al menos un set" };
   }
 
+  try {
+    await requireTournamentAccessByMatch(session.user.id, matchId, "MANAGE_RESULTS");
+  } catch (e) {
+    return { error: e instanceof PermissionError ? e.message : "Sin permisos" };
+  }
+
+  // Organizador activo (cookie), no una membresía arbitraria: para usuarios
+  // multi-club el scope debe coincidir con el club sobre el que operan.
+  // Memoizado por request: es la misma consulta que ya hizo el access check.
+  const membership = await getActiveMembership(session.user.id);
+  if (!membership) return { error: "Sin permisos" };
+
   const match = await prisma.match.findFirst({
-    where: {
-      id: matchId,
-      stage: { tournamentCategory: { tournament: { organizerId: membership.organizerId } } },
-    },
+    where: { id: matchId, stage: { tournamentCategory: { tournament: { organizerId: membership.organizerId } } } },
     include: {
       stage: {
         include: {
@@ -289,11 +313,6 @@ export async function editMatchResult(
   const session = await auth();
   if (!session?.user) return { error: "No autenticado" };
 
-  const membership = await prisma.userOrganizer.findFirst({
-    where: { userId: session.user.id, isActive: true },
-  });
-  if (!membership) return { error: "Sin permisos" };
-
   const matchId = formData.get("matchId") as string;
   const returnPath = formData.get("returnPath") as string;
   const isWalkover = formData.get("isWalkover") === "true";
@@ -315,11 +334,20 @@ export async function editMatchResult(
 
   if (!isWalkover && setsRaw.length === 0) return { error: "Ingresá al menos un set" };
 
+  try {
+    await requireTournamentAccessByMatch(session.user.id, matchId, "MANAGE_RESULTS");
+  } catch (e) {
+    return { error: e instanceof PermissionError ? e.message : "Sin permisos" };
+  }
+
+  // Organizador activo (cookie), no una membresía arbitraria: para usuarios
+  // multi-club el scope debe coincidir con el club sobre el que operan.
+  // Memoizado por request: es la misma consulta que ya hizo el access check.
+  const membership = await getActiveMembership(session.user.id);
+  if (!membership) return { error: "Sin permisos" };
+
   const match = await prisma.match.findFirst({
-    where: {
-      id: matchId,
-      stage: { tournamentCategory: { tournament: { organizerId: membership.organizerId } } },
-    },
+    where: { id: matchId, stage: { tournamentCategory: { tournament: { organizerId: membership.organizerId } } } },
     include: {
       stage: { include: { tournamentCategory: { include: { tournament: true } } } },
       teams: true,

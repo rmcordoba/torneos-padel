@@ -9,16 +9,16 @@ type Settings = NonNullable<Awaited<ReturnType<typeof getOrganizerConfig>>>["set
 
 const inp: React.CSSProperties = {
   width: "100%", boxSizing: "border-box",
-  background: "oklch(20% 0.012 250)",
-  border: "1px solid oklch(30% 0.01 250)",
+  background: "rgba(255,255,255,0.04)",
+  border: "1px solid rgba(255,255,255,0.1)",
   borderRadius: 8, padding: "9px 12px",
-  fontSize: 13, color: "var(--text-secondary)",
+  fontSize: 13, color: "#e2e8f0",
   outline: "none", fontFamily: "inherit",
 };
 
 const lbl: React.CSSProperties = {
   display: "block", fontSize: 11, fontWeight: 700,
-  color: "var(--text-faint)", marginBottom: 6,
+  color: "#64748b", marginBottom: 6,
   textTransform: "uppercase", letterSpacing: "0.06em",
 };
 
@@ -55,7 +55,7 @@ export function SettingsForm({ settings }: { settings: Settings }) {
         </div>
       </div>
 
-      <div style={{ display: "flex", flexDirection: "column", gap: 10, paddingTop: 4, borderTop: "1px solid oklch(24% 0.01 250)" }}>
+      <div style={{ display: "flex", flexDirection: "column", gap: 10, paddingTop: 4, borderTop: "1px solid rgba(255,255,255,0.06)" }}>
         <label style={{ display: "flex", alignItems: "flex-start", gap: 12, cursor: "pointer" }}>
           <input type="hidden" name="allowPublicRegistration" value="false" />
           <input
@@ -63,11 +63,11 @@ export function SettingsForm({ settings }: { settings: Settings }) {
             name="allowPublicRegistration"
             value="true"
             defaultChecked={settings?.allowPublicRegistration ?? false}
-            style={{ marginTop: 2, accentColor: "var(--accent)", width: 15, height: 15 }}
+            style={{ marginTop: 2, accentColor: "#a3e635", width: 15, height: 15 }}
           />
           <div>
-            <p style={{ fontSize: 13, fontWeight: 600, color: "var(--text-secondary)", marginBottom: 2 }}>Inscripción pública</p>
-            <p style={{ fontSize: 11, color: "var(--text-darkest)" }}>Los jugadores pueden inscribirse desde el portal público</p>
+            <p style={{ fontSize: 13, fontWeight: 600, color: "#e2e8f0", marginBottom: 2 }}>Inscripción pública</p>
+            <p style={{ fontSize: 11, color: "#334155" }}>Los jugadores pueden inscribirse desde el portal público</p>
           </div>
         </label>
 
@@ -78,11 +78,11 @@ export function SettingsForm({ settings }: { settings: Settings }) {
             name="requirePayment"
             value="true"
             defaultChecked={settings?.requirePayment ?? false}
-            style={{ marginTop: 2, accentColor: "var(--accent)", width: 15, height: 15 }}
+            style={{ marginTop: 2, accentColor: "#a3e635", width: 15, height: 15 }}
           />
           <div>
-            <p style={{ fontSize: 13, fontWeight: 600, color: "var(--text-secondary)", marginBottom: 2 }}>Requiere pago</p>
-            <p style={{ fontSize: 11, color: "var(--text-darkest)" }}>Las inscripciones quedan pendientes hasta confirmar el pago</p>
+            <p style={{ fontSize: 13, fontWeight: 600, color: "#e2e8f0", marginBottom: 2 }}>Requiere pago</p>
+            <p style={{ fontSize: 11, color: "#334155" }}>Las inscripciones quedan pendientes hasta confirmar el pago</p>
           </div>
         </label>
       </div>
@@ -93,8 +93,8 @@ export function SettingsForm({ settings }: { settings: Settings }) {
           disabled={isPending}
           style={{
             padding: "9px 22px", borderRadius: 8,
-            background: isPending ? "oklch(24% 0.01 250)" : "var(--accent)",
-            border: "none", color: isPending ? "var(--text-faint)" : "#0f172a",
+            background: isPending ? "rgba(255,255,255,0.06)" : "#a3e635",
+            border: "none", color: isPending ? "#64748b" : "#080e1a",
             fontFamily: "inherit", fontSize: 13, fontWeight: 700, cursor: isPending ? "not-allowed" : "pointer",
           }}
         >

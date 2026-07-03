@@ -1,7 +1,7 @@
 import { notFound, redirect } from "next/navigation";
 import Link from "next/link";
 import { auth } from "@/lib/auth";
-import { getOrganizersByUser } from "@/modules/organizers/queries";
+import { getActiveMembership } from "@/lib/active-organizer";
 import { getTournamentForEdit } from "@/modules/tournaments/queries";
 import { TournamentEditForm } from "../_components/tournament-edit-form";
 import { ChevronLeft, Settings2 } from "lucide-react";
@@ -20,10 +20,10 @@ export default async function EditTournamentPage({
   const session = await auth();
   if (!session?.user) redirect("/login");
 
-  const memberships = await getOrganizersByUser(session.user.id);
-  if (!memberships.length) redirect("/dashboard");
+  const membership = await getActiveMembership(session.user.id);
+  if (!membership) redirect("/dashboard");
 
-  const organizerId = memberships[0].organizerId;
+  const organizerId = membership.organizerId;
   const tournament = await getTournamentForEdit(id, organizerId);
   if (!tournament) notFound();
 
@@ -59,6 +59,7 @@ export default async function EditTournamentPage({
             endDate: toDateInput(tournament.endDate),
             registrationDeadline: tournament.registrationDeadline ? toDateInput(tournament.registrationDeadline) : null,
             isPublic: tournament.isPublic,
+            hasWeekdayPlay: tournament.hasWeekdayPlay,
           }}
         />
       </div>

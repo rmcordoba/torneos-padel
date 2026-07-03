@@ -7,6 +7,7 @@ import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 import { getOrganizerMember } from "@/modules/organizers/queries";
 import { createAuditLog } from "@/modules/audit/actions";
+import { requireMembership, requirePermission, requireTournamentAccess, requireTournamentAccessByCategory, PermissionError } from "@/lib/permissions";
 import { CompetitionFormat, type TournamentStatus, type TournamentCategoryStatus } from "@prisma/client";
 
 export type TournamentActionState = {
@@ -23,6 +24,7 @@ const categoryInputSchema = z.object({
   setsPerMatch: z.coerce.number().int().min(1).max(5).default(3),
   gamesPerSet: z.coerce.number().int().min(4).max(10).default(6),
   groupSize: z.coerce.number().int().min(3).max(8).optional().nullable(),
+  numGroups: z.coerce.number().int().min(2).max(32).optional().nullable(),
   teamsAdvancePerGroup: z.coerce.number().int().min(1).max(4).optional().nullable(),
   mexicanoRounds: z.coerce.number().int().min(3).max(20).optional().nullable(),
 }).refine((d) => d.minTeams <= d.maxTeams, {
@@ -38,6 +40,7 @@ const createTournamentSchema = z.object({
   registrationDeadline: z.coerce.date().optional().nullable(),
   venueId: z.string().cuid().optional().nullable(),
   isPublic: z.string().optional().transform((v) => v === "true"),
+  hasWeekdayPlay: z.string().optional().transform((v) => v === "true"),
   categoriesJson: z.string().min(2, "Agregá al menos una categoría"),
 });
 
@@ -55,7 +58,7 @@ export async function createTournament(
     return { fieldErrors: parsed.error.flatten().fieldErrors };
   }
 
-  const { name, description, startDate, endDate, registrationDeadline, venueId, isPublic, categoriesJson } = parsed.data;
+  const { name, description, startDate, endDate, registrationDeadline, venueId, isPublic, hasWeekdayPlay, categoriesJson } = parsed.data;
 
   // Parsear categorías
   let categoriesRaw: unknown[];
@@ -74,11 +77,13 @@ export async function createTournament(
     return { fieldErrors: { endDate: ["La fecha de fin debe ser posterior a la de inicio"] } };
   }
 
-  // Determinar organizador del usuario
-  const membership = await prisma.userOrganizer.findFirst({
-    where: { userId: session.user.id, isActive: true },
-  });
-  if (!membership) return { error: "No pertenecés a ningún organizador" };
+  // Determinar organizador y verificar permiso
+  let membership;
+  try {
+    membership = await requirePermission(session.user.id, "MANAGE_TOURNAMENTS");
+  } catch (e) {
+    return { error: e instanceof PermissionError ? e.message : "Sin permisos" };
+  }
 
   // Verificar que todas las categorías pertenecen al organizador
   const categoryIds = categoriesParsed.data.map((c) => c.categoryId);
@@ -94,12 +99,14 @@ export async function createTournament(
     const t = await tx.tournament.create({
       data: {
         organizerId: membership.organizerId,
+        createdByUserId: session.user.id,
         name,
         description: description || null,
         startDate,
         endDate,
         registrationDeadline: registrationDeadline || null,
         isPublic,
+        hasWeekdayPlay,
         status: "DRAFT",
         categories: {
           create: categoriesParsed.data.map((cat) => ({
@@ -111,8 +118,14 @@ export async function createTournament(
             setsPerMatch: cat.setsPerMatch,
             gamesPerSet: cat.gamesPerSet,
             formatConfig:
-              cat.format === "GROUP_PLAYOFF" && cat.groupSize
-                ? { groupSize: cat.groupSize, teamsAdvancePerGroup: cat.teamsAdvancePerGroup ?? 2 }
+              cat.format === "GROUP_PLAYOFF"
+                ? {
+                    // numGroups (cantidad exacta) tiene prioridad; si no, tamaño objetivo
+                    ...(cat.numGroups
+                      ? { numGroups: cat.numGroups }
+                      : { groupSize: cat.groupSize ?? 4 }),
+                    teamsAdvancePerGroup: cat.teamsAdvancePerGroup ?? 2,
+                  }
                 : cat.format === "MEXICANO"
                 ? { rounds: cat.mexicanoRounds ?? 7 }
                 : undefined,
@@ -146,6 +159,7 @@ const updateTournamentSchema = z.object({
   endDate: z.coerce.date({ required_error: "La fecha de fin es requerida" }),
   registrationDeadline: z.coerce.date().optional().nullable(),
   isPublic: z.string().optional().transform((v) => v === "true"),
+  hasWeekdayPlay: z.string().optional().transform((v) => v === "true"),
 });
 
 export async function updateTournament(
@@ -160,20 +174,20 @@ export async function updateTournament(
   const parsed = updateTournamentSchema.safeParse(raw);
   if (!parsed.success) return { fieldErrors: parsed.error.flatten().fieldErrors };
 
-  const { name, description, startDate, endDate, registrationDeadline, isPublic } = parsed.data;
+  const { name, description, startDate, endDate, registrationDeadline, isPublic, hasWeekdayPlay } = parsed.data;
 
   if (startDate > endDate) {
     return { fieldErrors: { endDate: ["La fecha de fin debe ser posterior a la de inicio"] } };
   }
 
-  const membership = await prisma.userOrganizer.findFirst({
-    where: { userId: session.user.id, isActive: true },
-  });
-  if (!membership) return { error: "No pertenecés a ningún organizador" };
-
-  const existing = await prisma.tournament.findFirst({
-    where: { id: tournamentId, organizerId: membership.organizerId },
-  });
+  let membership, existing;
+  try {
+    const result = await requireTournamentAccess(session.user.id, tournamentId, "MANAGE_TOURNAMENTS");
+    membership = result.membership;
+    existing = await prisma.tournament.findUnique({ where: { id: tournamentId } });
+  } catch (e) {
+    return { error: e instanceof PermissionError ? e.message : "Sin permisos" };
+  }
   if (!existing) return { error: "Torneo no encontrado" };
 
   await prisma.tournament.update({
@@ -185,6 +199,7 @@ export async function updateTournament(
       endDate,
       registrationDeadline: registrationDeadline || null,
       isPublic,
+      hasWeekdayPlay,
     },
   });
 
@@ -236,14 +251,14 @@ export async function updateTournamentCategory(
 
   const { maxTeams, pricePerTeam, setsPerMatch, gamesPerSet } = parsed.data;
 
-  const membership = await prisma.userOrganizer.findFirst({
-    where: { userId: session.user.id, isActive: true },
-  });
-  if (!membership) return { error: "Sin permisos" };
-
-  const tc = await prisma.tournamentCategory.findFirst({
-    where: { id: tournamentCategoryId, tournament: { organizerId: membership.organizerId } },
-  });
+  let membership, tc;
+  try {
+    const result = await requireTournamentAccessByCategory(session.user.id, tournamentCategoryId, "MANAGE_TOURNAMENTS");
+    membership = result.membership;
+    tc = await prisma.tournamentCategory.findUnique({ where: { id: tournamentCategoryId } });
+  } catch (e) {
+    return { error: e instanceof PermissionError ? e.message : "Sin permisos" };
+  }
   if (!tc) return { error: "Categoría no encontrada" };
 
   await prisma.tournamentCategory.update({
@@ -275,13 +290,14 @@ export async function deleteTournamentCategory(
   const session = await auth();
   if (!session?.user) return { error: "No autenticado" };
 
-  const membership = await prisma.userOrganizer.findFirst({
-    where: { userId: session.user.id, isActive: true },
-  });
-  if (!membership) return { error: "Sin permisos" };
+  try {
+    await requireTournamentAccessByCategory(session.user.id, tournamentCategoryId, "MANAGE_TOURNAMENTS");
+  } catch (e) {
+    return { error: e instanceof PermissionError ? e.message : "Sin permisos" };
+  }
 
-  const tc = await prisma.tournamentCategory.findFirst({
-    where: { id: tournamentCategoryId, tournament: { organizerId: membership.organizerId } },
+  const tc = await prisma.tournamentCategory.findUnique({
+    where: { id: tournamentCategoryId },
     include: { _count: { select: { stages: true } } },
   });
   if (!tc) return { error: "Categoría no encontrada" };
@@ -311,14 +327,13 @@ export async function updateTournamentCategoryStatus(
   const session = await auth();
   if (!session?.user) return { error: "No autenticado" };
 
-  const membership = await prisma.userOrganizer.findFirst({
-    where: { userId: session.user.id, isActive: true },
-  });
-  if (!membership) return { error: "Sin permisos" };
+  try {
+    await requireTournamentAccessByCategory(session.user.id, tournamentCategoryId, "MANAGE_TOURNAMENTS");
+  } catch (e) {
+    return { error: e instanceof PermissionError ? e.message : "Sin permisos" };
+  }
 
-  const tc = await prisma.tournamentCategory.findFirst({
-    where: { id: tournamentCategoryId, tournament: { organizerId: membership.organizerId } },
-  });
+  const tc = await prisma.tournamentCategory.findUnique({ where: { id: tournamentCategoryId } });
   if (!tc) return { error: "Categoría no encontrada" };
 
   const allowed = CAT_VALID_TRANSITIONS[tc.status] ?? [];
@@ -345,14 +360,15 @@ export async function updateTournamentStatus(
   const session = await auth();
   if (!session?.user) return { error: "No autenticado" };
 
-  const membership = await prisma.userOrganizer.findFirst({
-    where: { userId: session.user.id, isActive: true },
-  });
-  if (!membership) return { error: "Sin permisos" };
+  let membership;
+  try {
+    const result = await requireTournamentAccess(session.user.id, tournamentId, "MANAGE_TOURNAMENTS");
+    membership = result.membership;
+  } catch (e) {
+    return { error: e instanceof PermissionError ? e.message : "Sin permisos" };
+  }
 
-  const tournament = await prisma.tournament.findFirst({
-    where: { id: tournamentId, organizerId: membership.organizerId },
-  });
+  const tournament = await prisma.tournament.findUnique({ where: { id: tournamentId } });
   if (!tournament) return { error: "Torneo no encontrado" };
 
   const allowed = VALID_TRANSITIONS[tournament.status] ?? [];
@@ -389,14 +405,13 @@ export async function deleteTournament(
   const session = await auth();
   if (!session?.user) return { error: "No autenticado" };
 
-  const membership = await prisma.userOrganizer.findFirst({
-    where: { userId: session.user.id, isActive: true },
-  });
-  if (!membership) return { error: "Sin permisos" };
+  try {
+    await requireTournamentAccess(session.user.id, tournamentId, "MANAGE_TOURNAMENTS");
+  } catch (e) {
+    return { error: e instanceof PermissionError ? e.message : "Sin permisos" };
+  }
 
-  const tournament = await prisma.tournament.findFirst({
-    where: { id: tournamentId, organizerId: membership.organizerId },
-  });
+  const tournament = await prisma.tournament.findUnique({ where: { id: tournamentId } });
   if (!tournament) return { error: "Torneo no encontrado" };
 
   if (tournament.status !== "CANCELLED" && tournament.status !== "DRAFT") {

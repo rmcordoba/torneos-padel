@@ -8,6 +8,9 @@ generator client {
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
+  // Conexión directa (sin pooler) para migraciones. En Neon: el connection
+  // string "direct"; en local es la misma que DATABASE_URL.
+  directUrl = env("DIRECT_URL")
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -41,6 +44,14 @@ enum Gender {
   FEMALE
   MIXED
   OPEN
+}
+
+// Franjas horarias de disponibilidad para partidos entre semana (L–V).
+// Los fines de semana se asume disponibilidad total (no se modela).
+enum WeekdayTimeBand {
+  MORNING // 08:00–14:00
+  AFTERNOON // 14:00–18:00
+  EVENING // 18:00–00:00
 }
 
 enum TournamentStatus {
@@ -120,6 +131,35 @@ enum ImportType {
   TEAMS
 }
 
+// ── Reservas / turnos de cancha ──
+enum BookingStatus {
+  PENDING
+  CONFIRMED
+  CANCELLED
+  NO_SHOW
+  COMPLETED
+}
+
+enum BookingSource {
+  PUBLIC // reserva self-service desde la web pública
+  STAFF // cargada en el mostrador
+  FIXED // ocurrencia generada desde un turno fijo
+}
+
+enum PaymentStatus {
+  UNPAID
+  PARTIAL
+  PAID
+}
+
+// ── Suscripción SaaS del club ──
+enum SubscriptionStatus {
+  TRIALING
+  ACTIVE
+  PAST_DUE
+  CANCELED
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 // AUTH (Auth.js v5 / next-auth compatible)
 // ─────────────────────────────────────────────────────────────────────────────
@@ -142,6 +182,7 @@ model User {
   organizerMemberships UserOrganizer[]
   auditLogs            AuditLog[]
   passwordResetTokens  PasswordResetToken[]
+  createdTournaments   Tournament[]
 
   @@map("users")
 }
@@ -218,6 +259,7 @@ model PlayerProfile {
   user           User           @relation(fields: [userId], references: [id], onDelete: Cascade)
   teamPlayers    TeamPlayer[]
   rankingEntries RankingEntry[]
+  bookings       Booking[]
 
   @@map("player_profiles")
 }
@@ -240,14 +282,17 @@ model Organizer {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
-  settings      OrganizerSettings?
-  members       UserOrganizer[]
-  venues        Venue[]
-  categories    Category[]
-  tournaments   Tournament[]
-  rankingTables RankingTable[]
-  importBatches ImportBatch[]
-  auditLogs     AuditLog[]
+  settings          OrganizerSettings?
+  members           UserOrganizer[]
+  venues            Venue[]
+  categories        Category[]
+  tournaments       Tournament[]
+  rankingTables     RankingTable[]
+  importBatches     ImportBatch[]
+  auditLogs         AuditLog[]
+  bookings          Booking[]
+  recurringBookings RecurringBooking[]
+  subscription      Subscription?
 
   @@map("organizers")
 }
@@ -278,11 +323,29 @@ model UserOrganizer {
   createdAt   DateTime              @default(now())
   updatedAt   DateTime              @updatedAt
 
-  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  organizer Organizer @relation(fields: [organizerId], references: [id], onDelete: Cascade)
+  user             User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  organizer        Organizer          @relation(fields: [organizerId], references: [id], onDelete: Cascade)
+  tournamentAccess TournamentAccess[]
 
   @@unique([userId, organizerId])
+  @@index([organizerId])
   @@map("user_organizers")
+}
+
+// Acceso explícito de un colaborador a torneos específicos.
+// Si un COLLABORATOR no tiene ningún registro aquí → acceso a todos los torneos del org.
+// Si tiene registros → solo accede a esos torneos (+ los que él mismo creó).
+model TournamentAccess {
+  id              String @id @default(cuid())
+  userOrganizerId String
+  tournamentId    String
+
+  userOrganizer UserOrganizer @relation(fields: [userOrganizerId], references: [id], onDelete: Cascade)
+  tournament    Tournament    @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
+
+  @@unique([userOrganizerId, tournamentId])
+  @@index([tournamentId])
+  @@map("tournament_access")
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -300,24 +363,32 @@ model Venue {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
-  organizer     Organizer      @relation(fields: [organizerId], references: [id], onDelete: Cascade)
+  organizer     Organizer       @relation(fields: [organizerId], references: [id], onDelete: Cascade)
   courts        Court[]
   scheduleSlots ScheduleSlot[]
+  schedules     VenueSchedule[]
+  priceRules    PriceRule[]
 
+  @@index([organizerId])
   @@map("venues")
 }
 
 model Court {
-  id       String  @id @default(cuid())
-  venueId  String
-  name     String
-  surface  String? // cemento, césped sintético, cristal, etc.
-  isIndoor Boolean @default(false)
-  isActive Boolean @default(true)
+  id           String   @id @default(cuid())
+  venueId      String
+  name         String
+  surface      String? // cemento, césped sintético, cristal, etc.
+  isIndoor     Boolean  @default(false)
+  isActive     Boolean  @default(true)
+  bookingPrice Decimal? @db.Decimal(10, 2) // precio sugerido por turno de alquiler
 
-  venue            Venue             @relation(fields: [venueId], references: [id], onDelete: Cascade)
-  courtAssignments CourtAssignment[]
+  venue             Venue              @relation(fields: [venueId], references: [id], onDelete: Cascade)
+  courtAssignments  CourtAssignment[]
+  bookings          Booking[]
+  recurringBookings RecurringBooking[]
+  blocks            CourtBlock[]
 
+  @@index([venueId])
   @@map("courts")
 }
 
@@ -349,6 +420,7 @@ model Category {
 model Tournament {
   id                   String           @id @default(cuid())
   organizerId          String
+  createdByUserId      String?
   name                 String
   description          String?
   status               TournamentStatus @default(DRAFT)
@@ -356,16 +428,23 @@ model Tournament {
   endDate              DateTime
   registrationDeadline DateTime?
   posterUrl            String?
+  // Si el torneo tiene partidos entre semana, en la inscripción se pide la
+  // disponibilidad horaria de la pareja (ver Registration.weekdayAvailability).
+  hasWeekdayPlay       Boolean          @default(false)
   isPublic             Boolean          @default(false)
   publishedAt          DateTime?
   createdAt            DateTime         @default(now())
   updatedAt            DateTime         @updatedAt
 
   organizer     Organizer            @relation(fields: [organizerId], references: [id], onDelete: Cascade)
+  createdBy     User?                @relation(fields: [createdByUserId], references: [id])
   categories    TournamentCategory[]
   scheduleSlots ScheduleSlot[]
   auditLogs     AuditLog[]
+  accessGrants  TournamentAccess[]
 
+  @@index([organizerId, status])
+  @@index([isPublic, status])
   @@map("tournaments")
 }
 
@@ -401,6 +480,7 @@ model TournamentCategory {
   rankingTable    RankingTable?
 
   @@unique([tournamentId, categoryId])
+  @@index([categoryId])
   @@map("tournament_categories")
 }
 
@@ -434,6 +514,7 @@ model TeamPlayer {
   playerProfile PlayerProfile @relation(fields: [playerProfileId], references: [id])
 
   @@unique([teamId, playerProfileId])
+  @@index([playerProfileId])
   @@map("team_players")
 }
 
@@ -447,6 +528,10 @@ model Registration {
   teamId               String
   status               RegistrationStatus @default(PENDING)
   notes                String?
+  // Disponibilidad horaria de la pareja para partidos entre semana.
+  // Vacío = sin declarar (torneo sin juego entre semana). Las 3 franjas = disponibilidad total.
+  // Solo aplica a días L–V; los fines de semana se asume disponibilidad total.
+  weekdayAvailability  WeekdayTimeBand[]  @default([])
   reviewedAt           DateTime?
   reviewedByUserId     String?
   createdAt            DateTime           @default(now())
@@ -456,21 +541,25 @@ model Registration {
   team               Team               @relation(fields: [teamId], references: [id])
 
   @@unique([tournamentCategoryId, teamId])
+  @@index([teamId])
+  @@index([status])
   @@map("registrations")
 }
 
 model WaitlistEntry {
-  id                   String    @id @default(cuid())
+  id                   String            @id @default(cuid())
   tournamentCategoryId String
   teamId               String
   position             Int // orden en la lista de espera
+  weekdayAvailability  WeekdayTimeBand[] @default([]) // se copia a Registration al promover
   notifiedAt           DateTime?
-  createdAt            DateTime  @default(now())
+  createdAt            DateTime          @default(now())
 
   tournamentCategory TournamentCategory @relation(fields: [tournamentCategoryId], references: [id], onDelete: Cascade)
   team               Team               @relation(fields: [teamId], references: [id])
 
   @@unique([tournamentCategoryId, teamId])
+  @@index([teamId])
   @@map("waitlist_entries")
 }
 
@@ -495,6 +584,7 @@ model Stage {
   bracketNodes       BracketNode[]
   matches            Match[]
 
+  @@index([tournamentCategoryId])
   @@map("stages")
 }
 
@@ -509,6 +599,7 @@ model Group {
   standings GroupStanding[]
   matches   Match[]
 
+  @@index([stageId])
   @@map("groups")
 }
 
@@ -530,6 +621,7 @@ model GroupStanding {
   team  Team  @relation(fields: [teamId], references: [id])
 
   @@unique([groupId, teamId])
+  @@index([teamId])
   @@map("group_standings")
 }
 
@@ -552,6 +644,9 @@ model BracketNode {
   team       Team?         @relation(fields: [teamId], references: [id])
   match      Match?
 
+  @@index([stageId])
+  @@index([parentNodeId])
+  @@index([teamId])
   @@map("bracket_nodes")
 }
 
@@ -582,6 +677,9 @@ model Match {
   scheduleSlot      ScheduleSlot?
   rescheduleHistory RescheduleHistory[]
 
+  @@index([stageId])
+  @@index([groupId])
+  @@index([status, scheduledAt])
   @@map("matches")
 }
 
@@ -595,6 +693,7 @@ model MatchTeam {
   team  Team  @relation(fields: [teamId], references: [id])
 
   @@unique([matchId, teamId])
+  @@index([teamId])
   @@map("match_teams")
 }
 
@@ -647,6 +746,8 @@ model ScheduleSlot {
   match           Match?           @relation(fields: [matchId], references: [id])
   courtAssignment CourtAssignment?
 
+  @@index([tournamentId, date])
+  @@index([venueId])
   @@map("schedule_slots")
 }
 
@@ -658,6 +759,7 @@ model CourtAssignment {
   scheduleSlot ScheduleSlot @relation(fields: [scheduleSlotId], references: [id], onDelete: Cascade)
   court        Court        @relation(fields: [courtId], references: [id])
 
+  @@index([courtId])
   @@map("court_assignments")
 }
 
@@ -672,6 +774,7 @@ model RescheduleHistory {
 
   match Match @relation(fields: [matchId], references: [id], onDelete: Cascade)
 
+  @@index([matchId])
   @@map("reschedule_history")
 }
 
@@ -695,6 +798,7 @@ model RankingTable {
   entries            RankingEntry[]
   rules              RankingRule[]
 
+  @@index([organizerId])
   @@map("ranking_tables")
 }
 
@@ -716,6 +820,8 @@ model RankingEntry {
   movements     RankingMovementHistory[]
 
   @@unique([rankingTableId, playerProfileId])
+  @@index([playerProfileId])
+  @@index([teamId])
   @@map("ranking_entries")
 }
 
@@ -728,6 +834,7 @@ model RankingRule {
 
   rankingTable RankingTable @relation(fields: [rankingTableId], references: [id], onDelete: Cascade)
 
+  @@index([rankingTableId])
   @@map("ranking_rules")
 }
 
@@ -743,6 +850,7 @@ model RankingMovementHistory {
 
   rankingEntry RankingEntry @relation(fields: [rankingEntryId], references: [id], onDelete: Cascade)
 
+  @@index([rankingEntryId])
   @@map("ranking_movement_history")
 }
 
@@ -768,6 +876,8 @@ model AuditLog {
   organizer  Organizer?  @relation(fields: [organizerId], references: [id])
   tournament Tournament? @relation(fields: [tournamentId], references: [id])
 
+  @@index([organizerId, createdAt])
+  @@index([entity, entityId])
   @@map("audit_logs")
 }
 
@@ -804,4 +914,186 @@ model ImportRowError {
   importBatch ImportBatch @relation(fields: [importBatchId], references: [id], onDelete: Cascade)
 
   @@map("import_row_errors")
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// BOOKINGS / TURNOS DE CANCHA
+// Caso de uso de alquiler de canchas, integrado con la ocupación de torneos.
+// La disponibilidad se calcula uniendo: ScheduleSlot (partidos) + Booking + CourtBlock.
+// Un constraint EXCLUDE (ver migración SQL) impide a nivel de base dos reservas
+// solapadas en la misma cancha.
+// ─────────────────────────────────────────────────────────────────────────────
+
+// Horario de apertura de una sede por día de semana + duración del turno.
+model VenueSchedule {
+  id          String  @id @default(cuid())
+  venueId     String
+  weekday     Int // 0 = domingo ... 6 = sábado
+  openMinute  Int // minutos desde medianoche (ej: 480 = 08:00)
+  closeMinute Int // ej: 1380 = 23:00, 1440 = 24:00
+  slotMinutes Int     @default(90) // duración estándar del turno
+  isClosed    Boolean @default(false) // día cerrado (no se generan slots)
+
+  venue Venue @relation(fields: [venueId], references: [id], onDelete: Cascade)
+
+  @@unique([venueId, weekday])
+  @@map("venue_schedules")
+}
+
+// Precio por hora según franja horaria (a nivel sede, aplica a todas las canchas).
+// Un turno se cobra prorrateado: la porción de minutos que cae en cada franja
+// se cobra a esa tarifa por hora (ej: tarifa 25000/h → media hora = 12500).
+model PriceRule {
+  id           String  @id @default(cuid())
+  venueId      String
+  startMinute  Int // minutos desde medianoche (inicio de la franja)
+  endMinute    Int // fin de la franja
+  pricePerHour Decimal @db.Decimal(10, 2)
+
+  venue Venue @relation(fields: [venueId], references: [id], onDelete: Cascade)
+
+  @@index([venueId])
+  @@map("price_rules")
+}
+
+// Reserva concreta de una cancha en una franja horaria.
+model Booking {
+  id          String        @id @default(cuid())
+  organizerId String
+  courtId     String
+  date        DateTime      @db.Date // el día (para indexar/consultar)
+  startTime   DateTime // timestamp completo de inicio
+  endTime     DateTime // timestamp completo de fin
+  status      BookingStatus @default(CONFIRMED)
+  source      BookingSource @default(STAFF)
+
+  // Cliente: registrado (logueado) o walk-in cargado en el mostrador
+  playerProfileId String?
+  customerName    String? // nombre del cliente sin cuenta
+  customerPhone   String?
+
+  price         Decimal?      @db.Decimal(10, 2)
+  paymentStatus PaymentStatus @default(UNPAID)
+  notes         String?
+
+  recurringBookingId String? // si proviene de un turno fijo
+  createdByUserId    String? // userId del staff que la cargó (sin FK, como recordedById)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  organizer        Organizer         @relation(fields: [organizerId], references: [id], onDelete: Cascade)
+  court            Court             @relation(fields: [courtId], references: [id], onDelete: Cascade)
+  playerProfile    PlayerProfile?    @relation(fields: [playerProfileId], references: [id])
+  recurringBooking RecurringBooking? @relation(fields: [recurringBookingId], references: [id], onDelete: SetNull)
+
+  @@index([courtId, date])
+  @@index([organizerId, date])
+  @@map("bookings")
+}
+
+// Turno fijo (plantilla recurrente). Solo lo crean/administran los admins.
+// Sus ocurrencias se materializan como Booking (source = FIXED).
+model RecurringBooking {
+  id          String    @id @default(cuid())
+  organizerId String
+  courtId     String
+  weekday     Int // 0 = domingo ... 6 = sábado
+  startMinute Int // minutos desde medianoche
+  durationMin Int       @default(90)
+  validFrom   DateTime  @db.Date
+  validUntil  DateTime? @db.Date // null = sin fecha de fin
+
+  customerName  String
+  customerPhone String?
+  price         Decimal? @db.Decimal(10, 2)
+  notes         String?
+  isActive      Boolean  @default(true)
+
+  createdByUserId String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  organizer Organizer @relation(fields: [organizerId], references: [id], onDelete: Cascade)
+  court     Court     @relation(fields: [courtId], references: [id], onDelete: Cascade)
+  bookings  Booking[] // ocurrencias materializadas
+
+  @@index([courtId, weekday])
+  @@map("recurring_bookings")
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// BILLING / SUSCRIPCIONES SaaS
+// Cobro manual/offline: un super-admin activa/renueva. El estado "efectivo"
+// (writable o read-only) se calcula por fechas en src/lib/subscription.ts.
+// ─────────────────────────────────────────────────────────────────────────────
+
+model Plan {
+  id                String  @id @default(cuid())
+  name              String // "Básico", "Pro"
+  slug              String  @unique // "basico", "pro"
+  priceMonthly      Decimal @db.Decimal(10, 2)
+  hasBookingsModule Boolean @default(false)
+  isDefault         Boolean @default(false) // plan asignado en el alta (trial)
+  isActive          Boolean @default(true)
+  sortOrder         Int     @default(0)
+
+  subscriptions Subscription[]
+
+  @@map("plans")
+}
+
+model Subscription {
+  id               String             @id @default(cuid())
+  organizerId      String             @unique
+  planId           String
+  status           SubscriptionStatus @default(TRIALING)
+  trialEndsAt      DateTime?
+  currentPeriodEnd DateTime? // hasta cuándo está pago
+  canceledAt       DateTime?
+  notes            String?
+  createdAt        DateTime           @default(now())
+  updatedAt        DateTime           @updatedAt
+
+  organizer Organizer             @relation(fields: [organizerId], references: [id], onDelete: Cascade)
+  plan      Plan                  @relation(fields: [planId], references: [id])
+  payments  SubscriptionPayment[]
+
+  @@map("subscriptions")
+}
+
+// Historial de cobros manuales (transferencia/efectivo).
+model SubscriptionPayment {
+  id               String   @id @default(cuid())
+  subscriptionId   String
+  amount           Decimal  @db.Decimal(10, 2)
+  paidAt           DateTime @default(now())
+  periodStart      DateTime
+  periodEnd        DateTime
+  method           String? // "transferencia", "efectivo", "mercadopago"
+  mpPaymentId      String?  @unique // id del pago en Mercado Pago (idempotencia del webhook)
+  recordedByUserId String?
+  notes            String?
+
+  subscription Subscription @relation(fields: [subscriptionId], references: [id], onDelete: Cascade)
+
+  @@index([subscriptionId])
+  @@map("subscription_payments")
+}
+
+// Bloqueo de cancha (mantenimiento, cierre puntual, clase, evento).
+model CourtBlock {
+  id              String   @id @default(cuid())
+  courtId         String
+  date            DateTime @db.Date
+  startTime       DateTime
+  endTime         DateTime
+  reason          String?
+  createdByUserId String?
+  createdAt       DateTime @default(now())
+
+  court Court @relation(fields: [courtId], references: [id], onDelete: Cascade)
+
+  @@index([courtId, date])
+  @@map("court_blocks")
 }

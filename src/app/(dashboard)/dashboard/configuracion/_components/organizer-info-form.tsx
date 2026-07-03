@@ -9,16 +9,16 @@ type Organizer = NonNullable<Awaited<ReturnType<typeof getOrganizerConfig>>>;
 
 const inp: React.CSSProperties = {
   width: "100%", boxSizing: "border-box",
-  background: "oklch(20% 0.012 250)",
-  border: "1px solid oklch(30% 0.01 250)",
+  background: "rgba(255,255,255,0.04)",
+  border: "1px solid rgba(255,255,255,0.1)",
   borderRadius: 8, padding: "9px 12px",
-  fontSize: 13, color: "var(--text-secondary)",
+  fontSize: 13, color: "#e2e8f0",
   outline: "none", fontFamily: "inherit",
 };
 
 const lbl: React.CSSProperties = {
   display: "block", fontSize: 11, fontWeight: 700,
-  color: "var(--text-faint)", marginBottom: 6,
+  color: "#64748b", marginBottom: 6,
   textTransform: "uppercase", letterSpacing: "0.06em",
 };
 
@@ -87,8 +87,8 @@ export function OrganizerInfoForm({ organizer }: { organizer: Organizer }) {
           disabled={isPending}
           style={{
             padding: "9px 22px", borderRadius: 8,
-            background: isPending ? "oklch(24% 0.01 250)" : "var(--accent)",
-            border: "none", color: isPending ? "var(--text-faint)" : "#0f172a",
+            background: isPending ? "rgba(255,255,255,0.06)" : "#a3e635",
+            border: "none", color: isPending ? "#64748b" : "#080e1a",
             fontFamily: "inherit", fontSize: 13, fontWeight: 700, cursor: isPending ? "not-allowed" : "pointer",
           }}
         >

@@ -2,7 +2,7 @@
 
 import { useActionState, useState } from "react";
 import { updateTournament, type TournamentActionState } from "@/modules/tournaments/actions";
-import { AlertCircle, Check, Loader2, Globe, Lock } from "lucide-react";
+import { AlertCircle, Check, Loader2, Globe, Lock, CalendarClock } from "lucide-react";
 
 interface Props {
   tournamentId: string;
@@ -13,6 +13,7 @@ interface Props {
     endDate: string;
     registrationDeadline: string | null;
     isPublic: boolean;
+    hasWeekdayPlay: boolean;
   };
 }
 
@@ -23,6 +24,7 @@ export function TournamentEditForm({ tournamentId, defaultValues }: Props) {
   const action = updateTournament.bind(null, tournamentId);
   const [state, formAction, isPending] = useActionState<TournamentActionState, FormData>(action, null);
   const [isPublic, setIsPublic] = useState(defaultValues.isPublic);
+  const [hasWeekdayPlay, setHasWeekdayPlay] = useState(defaultValues.hasWeekdayPlay);
 
   return (
     <form action={formAction} style={{ display: "flex", flexDirection: "column", gap: 20 }}>
@@ -78,6 +80,25 @@ export function TournamentEditForm({ tournamentId, defaultValues }: Props) {
           {/* Toggle switch */}
           <div style={{ marginLeft: "auto", position: "relative", width: 44, height: 24, borderRadius: 12, background: isPublic ? "var(--accent)" : "var(--border-strong)", flexShrink: 0 }}>
             <span style={{ position: "absolute", top: 2, left: isPublic ? 22 : 2, width: 20, height: 20, borderRadius: "50%", background: isPublic ? "#0a0f0a" : "var(--bg-elevated)", transition: "left 0.2s", display: "block" }} />
+          </div>
+        </button>
+      </div>
+
+      {/* Juego entre semana toggle */}
+      <div style={{ borderRadius: 10, border: "1px solid var(--border-default)", padding: "14px 16px" }}>
+        <input type="hidden" name="hasWeekdayPlay" value={String(hasWeekdayPlay)} />
+        <button type="button" onClick={() => setHasWeekdayPlay((p) => !p)} disabled={isPending} style={{ display: "flex", alignItems: "center", gap: 14, width: "100%", textAlign: "left", background: "none", border: "none", cursor: "pointer", padding: 0 }}>
+          <div style={{ width: 36, height: 36, borderRadius: 9, display: "flex", alignItems: "center", justifyContent: "center", background: hasWeekdayPlay ? "var(--accent-15)" : "var(--bg-elevated)", border: `1px solid ${hasWeekdayPlay ? "var(--accent-30)" : "var(--border-default)"}`, flexShrink: 0 }}>
+            <CalendarClock size={16} color={hasWeekdayPlay ? "var(--accent)" : "var(--text-faint)"} />
+          </div>
+          <div>
+            <p style={{ fontSize: 13, fontWeight: 600, color: "var(--text-primary)" }}>Se juega entre semana (L–V)</p>
+            <p style={{ fontSize: 11, color: "var(--text-dimmer)", marginTop: 2 }}>
+              {hasWeekdayPlay ? "Se pide disponibilidad horaria al inscribir" : "No se pide disponibilidad horaria"}
+            </p>
+          </div>
+          <div style={{ marginLeft: "auto", position: "relative", width: 44, height: 24, borderRadius: 12, background: hasWeekdayPlay ? "var(--accent)" : "var(--border-strong)", flexShrink: 0 }}>
+            <span style={{ position: "absolute", top: 2, left: hasWeekdayPlay ? 22 : 2, width: 20, height: 20, borderRadius: "50%", background: hasWeekdayPlay ? "#0a0f0a" : "var(--bg-elevated)", transition: "left 0.2s", display: "block" }} />
           </div>
         </button>
       </div>

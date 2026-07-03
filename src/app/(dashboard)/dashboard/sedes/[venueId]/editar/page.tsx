@@ -1,7 +1,7 @@
 import { notFound, redirect } from "next/navigation";
 import Link from "next/link";
 import { auth } from "@/lib/auth";
-import { getOrganizersByUser } from "@/modules/organizers/queries";
+import { getActiveMembership } from "@/lib/active-organizer";
 import { getVenueById } from "@/modules/venues/queries";
 import { VenueForm } from "../../_components/venue-form";
 import { ChevronLeft } from "lucide-react";
@@ -19,10 +19,10 @@ export default async function EditVenuePage({
   const session = await auth();
   if (!session?.user) redirect("/login");
 
-  const memberships = await getOrganizersByUser(session.user.id);
-  if (!memberships.length) redirect("/dashboard");
+  const membership = await getActiveMembership(session.user.id);
+  if (!membership) redirect("/dashboard");
 
-  const venue = await getVenueById(venueId, memberships[0].organizerId);
+  const venue = await getVenueById(venueId, membership.organizerId);
   if (!venue) notFound();
 
   return (
@@ -30,16 +30,16 @@ export default async function EditVenuePage({
       <div className="flex items-center gap-2">
         <Link
           href={`/dashboard/sedes/${venueId}`}
-          className="flex items-center gap-1 text-sm text-slate-500 hover:text-slate-800 transition-colors"
+          className="flex items-center gap-1 text-sm text-slate-500 hover:text-slate-300 transition-colors"
         >
           <ChevronLeft className="h-4 w-4" /> {venue.name}
         </Link>
-        <span className="text-slate-300">/</span>
-        <span className="text-sm font-semibold text-slate-900">Editar</span>
+        <span className="text-slate-600">/</span>
+        <span className="text-sm font-bold text-slate-300">Editar</span>
       </div>
 
       <div>
-        <h1 className="text-2xl font-bold text-slate-900">Editar sede</h1>
+        <h1 className="text-2xl font-black text-slate-50 font-display tracking-tight">Editar sede</h1>
         <p className="text-sm text-slate-500 mt-1">Modificá los datos de {venue.name}.</p>
       </div>
 

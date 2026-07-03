@@ -17,6 +17,7 @@ interface CategoryEntry {
   gamesPerSet: number;
   pricePerTeam?: number;
   groupSize?: number;
+  numGroups?: number;
   teamsAdvancePerGroup?: number;
   mexicanoRounds?: number;
 }
@@ -57,6 +58,7 @@ function FormatBadge({ format }: { format: CompFormat }) {
 }
 
 const lbl = { fontSize: 11, fontWeight: 700, color: "var(--text-faint)", textTransform: "uppercase" as const, letterSpacing: "0.06em", display: "block", marginBottom: 6 };
+const pillActive = { borderColor: "var(--accent-30)", background: "var(--accent-10)", color: "var(--accent)" };
 const fieldErr = { fontSize: 11, color: "#f87171", marginTop: 4 };
 
 export function TournamentForm({ venues, categories, organizerDefaults }: TournamentFormProps) {
@@ -64,6 +66,7 @@ export function TournamentForm({ venues, categories, organizerDefaults }: Tourna
   const [categoryEntries, setCategoryEntries] = useState<CategoryEntry[]>([]);
   const [addingCategory, setAddingCategory] = useState(false);
   const [isPublic, setIsPublic] = useState(false);
+  const [hasWeekdayPlay, setHasWeekdayPlay] = useState(false);
 
   return (
     <form action={action} style={{ display: "grid", gridTemplateColumns: "1fr 320px", gap: 20, alignItems: "start" }}>
@@ -130,6 +133,19 @@ export function TournamentForm({ venues, categories, organizerDefaults }: Tourna
               </button>
               <input type="hidden" name="isPublic" value={String(isPublic)} />
             </div>
+
+            {/* Weekday play toggle */}
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", borderRadius: 10, border: "1px solid var(--border-default)", background: "var(--bg-elevated)", padding: "12px 16px" }}>
+              <div>
+                <p style={{ fontSize: 13, fontWeight: 600, color: "var(--text-primary)" }}>Se juega entre semana (L–V)</p>
+                <p style={{ fontSize: 11, color: "var(--text-dimmer)", marginTop: 2 }}>Pedir disponibilidad horaria a las parejas al inscribirse</p>
+              </div>
+              <button type="button" role="switch" aria-checked={hasWeekdayPlay} onClick={() => setHasWeekdayPlay((v) => !v)}
+                style={{ position: "relative", width: 44, height: 24, borderRadius: 12, border: "none", background: hasWeekdayPlay ? "var(--accent)" : "var(--border-strong)", cursor: "pointer", flexShrink: 0 }}>
+                <span style={{ position: "absolute", top: 2, left: hasWeekdayPlay ? 22 : 2, width: 20, height: 20, borderRadius: "50%", background: hasWeekdayPlay ? "#0a0f0a" : "var(--bg-elevated)", transition: "left 0.2s", display: "block" }} />
+              </button>
+              <input type="hidden" name="hasWeekdayPlay" value={String(hasWeekdayPlay)} />
+            </div>
           </div>
         </FormSection>
 
@@ -190,7 +206,7 @@ export function TournamentForm({ venues, categories, organizerDefaults }: Tourna
         <div style={{ background: "var(--bg-surface)", borderRadius: 12, border: "1px solid var(--border-default)", overflow: "hidden" }}>
           <div style={{ padding: "14px 18px", background: "var(--accent-15)", borderBottom: "1px solid var(--accent-30)" }}>
             <p style={{ fontSize: 10, fontWeight: 700, color: "var(--accent)", textTransform: "uppercase", letterSpacing: "0.07em" }}>Resumen</p>
-            <p style={{ fontSize: 14, fontWeight: 700, color: "var(--text-primary)", marginTop: 2, fontFamily: "Space Grotesk, sans-serif" }}>Vista previa</p>
+            <p style={{ fontSize: 14, fontWeight: 700, color: "var(--text-primary)", marginTop: 2, fontFamily: "var(--font-space), sans-serif" }}>Vista previa</p>
           </div>
           <div style={{ padding: "18px", display: "flex", flexDirection: "column", gap: 16 }}>
             <div>
@@ -274,6 +290,8 @@ function AddCategoryForm({ categories, usedCategoryIds, organizerDefaults, onAdd
   const [gamesPerSet, setGamesPerSet] = useState(organizerDefaults.defaultGamesPerSet);
   const [pricePerTeam, setPricePerTeam] = useState("");
   const [groupSize, setGroupSize] = useState(4);
+  const [groupingMode, setGroupingMode] = useState<"size" | "count">("size");
+  const [numGroups, setNumGroups] = useState(4);
   const [teamsAdvance, setTeamsAdvance] = useState(2);
   const [mexicanoRounds, setMexicanoRounds] = useState(7);
   const [showAdvanced, setShowAdvanced] = useState(false);
@@ -293,7 +311,8 @@ function AddCategoryForm({ categories, usedCategoryIds, organizerDefaults, onAdd
       setsPerMatch,
       gamesPerSet,
       pricePerTeam: pricePerTeam ? Number(pricePerTeam) : undefined,
-      groupSize: format === "GROUP_PLAYOFF" ? groupSize : undefined,
+      groupSize: format === "GROUP_PLAYOFF" && groupingMode === "size" ? groupSize : undefined,
+      numGroups: format === "GROUP_PLAYOFF" && groupingMode === "count" ? numGroups : undefined,
       teamsAdvancePerGroup: format === "GROUP_PLAYOFF" ? teamsAdvance : undefined,
       mexicanoRounds: format === "MEXICANO" ? mexicanoRounds : undefined,
     });
@@ -331,19 +350,47 @@ function AddCategoryForm({ categories, usedCategoryIds, organizerDefaults, onAdd
 
       {/* Config: Grupos + Playoff */}
       {format === "GROUP_PLAYOFF" && (
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, padding: 14, borderRadius: 8, background: "var(--bg-elevated)", border: "1px solid var(--border-default)" }}>
+        <div style={{ display: "flex", flexDirection: "column", gap: 12, padding: 14, borderRadius: 8, background: "var(--bg-elevated)", border: "1px solid var(--border-default)" }}>
           <div>
-            <label style={lbl}>Equipos por grupo</label>
-            <select value={groupSize} onChange={(e) => setGroupSize(Number(e.target.value))} className="field-input">
-              {[3, 4, 5, 6].map((n) => <option key={n} value={n}>{n} equipos</option>)}
-            </select>
+            <label style={lbl}>Armado de grupos</label>
+            <div style={{ display: "flex", gap: 8 }}>
+              <button type="button" onClick={() => setGroupingMode("size")} className="filter-pill" style={groupingMode === "size" ? pillActive : undefined}>
+                Por tamaño de grupo
+              </button>
+              <button type="button" onClick={() => setGroupingMode("count")} className="filter-pill" style={groupingMode === "count" ? pillActive : undefined}>
+                Por cantidad de grupos
+              </button>
+            </div>
           </div>
-          <div>
-            <label style={lbl}>Clasifican al playoff</label>
-            <select value={teamsAdvance} onChange={(e) => setTeamsAdvance(Number(e.target.value))} className="field-input">
-              {[1, 2, 3].map((n) => <option key={n} value={n}>{n} por grupo</option>)}
-            </select>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+            {groupingMode === "size" ? (
+              <div>
+                <label style={lbl}>Equipos por grupo</label>
+                <select value={groupSize} onChange={(e) => setGroupSize(Number(e.target.value))} className="field-input">
+                  {[3, 4, 5, 6].map((n) => <option key={n} value={n}>{n} equipos</option>)}
+                </select>
+              </div>
+            ) : (
+              <div>
+                <label style={lbl}>Cantidad de grupos</label>
+                <select value={numGroups} onChange={(e) => setNumGroups(Number(e.target.value))} className="field-input">
+                  {[2, 3, 4, 5, 6, 7, 8, 10, 12, 16].map((n) => <option key={n} value={n}>{n} grupos</option>)}
+                </select>
+              </div>
+            )}
+            <div>
+              <label style={lbl}>Clasifican al playoff</label>
+              <select value={teamsAdvance} onChange={(e) => setTeamsAdvance(Number(e.target.value))} className="field-input">
+                {[1, 2, 3].map((n) => <option key={n} value={n}>{n} por grupo</option>)}
+              </select>
+            </div>
           </div>
+          <p style={{ fontSize: 11, color: "var(--text-faint)" }}>
+            {groupingMode === "count"
+              ? `Las parejas se reparten balanceadas en ${numGroups} grupos (difieren a lo sumo en 1). Ej: 19 parejas en 6 grupos → cinco de 3 y uno de 4.`
+              : "La cantidad de grupos se calcula según las parejas inscriptas."}
+            {" "}En el playoff, los byes les tocan a los mejores de la fase de grupos.
+          </p>
         </div>
       )}
 

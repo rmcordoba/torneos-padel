@@ -3,7 +3,8 @@
 import { revalidatePath } from "next/cache";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { getOrganizersByUser } from "@/modules/organizers/queries";
+import { getActiveMembership } from "@/lib/active-organizer";
+import { requireWritable } from "@/lib/permissions";
 
 // Default points when no RankingRule is configured
 const DEFAULT_POINTS: Record<number, number> = {
@@ -20,9 +21,10 @@ export async function recalculateRanking(
   const session = await auth();
   if (!session?.user) return { error: "No autenticado" };
 
-  const memberships = await getOrganizersByUser(session.user.id);
-  if (!memberships.length) return { error: "Sin organización" };
-  const organizerId = memberships[0].organizerId;
+  const membership = await getActiveMembership(session.user.id);
+  if (membership) await requireWritable(membership.organizerId);
+  if (!membership) return { error: "Sin organización" };
+  const organizerId = membership.organizerId;
 
   const table = await prisma.rankingTable.findFirst({
     where: { id: rankingTableId, organizerId },
@@ -233,6 +235,7 @@ export async function recalculateRanking(
   });
 
   revalidatePath("/dashboard/ranking");
+  revalidatePath("/ranking");
   return {};
 }
 
@@ -247,11 +250,12 @@ export async function addRankingRule(
   const session = await auth();
   if (!session?.user) return { error: "No autenticado" };
 
-  const memberships = await getOrganizersByUser(session.user.id);
-  if (!memberships.length) return { error: "Sin organización" };
+  const membership = await getActiveMembership(session.user.id);
+  if (membership) await requireWritable(membership.organizerId);
+  if (!membership) return { error: "Sin organización" };
 
   const table = await prisma.rankingTable.findFirst({
-    where: { id: rankingTableId, organizerId: memberships[0].organizerId },
+    where: { id: rankingTableId, organizerId: membership.organizerId },
   });
   if (!table) return { error: "Tabla no encontrada" };
 
@@ -271,6 +275,7 @@ export async function addRankingRule(
   }
 
   revalidatePath("/dashboard/ranking");
+  revalidatePath("/ranking");
   return {};
 }
 
@@ -278,30 +283,34 @@ export async function deleteRankingRule(ruleId: string): Promise<void> {
   const session = await auth();
   if (!session?.user) return;
 
-  const memberships = await getOrganizersByUser(session.user.id);
-  if (!memberships.length) return;
+  const membership = await getActiveMembership(session.user.id);
+  if (membership) await requireWritable(membership.organizerId);
+  if (!membership) return;
 
   const rule = await prisma.rankingRule.findFirst({
-    where: { id: ruleId, rankingTable: { organizerId: memberships[0].organizerId } },
+    where: { id: ruleId, rankingTable: { organizerId: membership.organizerId } },
   });
   if (!rule) return;
 
   await prisma.rankingRule.delete({ where: { id: ruleId } });
   revalidatePath("/dashboard/ranking");
+  revalidatePath("/ranking");
 }
 
 export async function deleteRankingTable(tableId: string): Promise<{ error?: string }> {
   const session = await auth();
   if (!session?.user) return { error: "No autenticado" };
 
-  const memberships = await getOrganizersByUser(session.user.id);
-  if (!memberships.length) return { error: "Sin organización" };
+  const membership = await getActiveMembership(session.user.id);
+  if (membership) await requireWritable(membership.organizerId);
+  if (!membership) return { error: "Sin organización" };
 
   await prisma.rankingTable.deleteMany({
-    where: { id: tableId, organizerId: memberships[0].organizerId },
+    where: { id: tableId, organizerId: membership.organizerId },
   });
 
   revalidatePath("/dashboard/ranking");
+  revalidatePath("/ranking");
   return {};
 }
 
@@ -312,8 +321,9 @@ export async function createRankingTable(
   const session = await auth();
   if (!session?.user) return { error: "No autenticado" };
 
-  const memberships = await getOrganizersByUser(session.user.id);
-  if (!memberships.length) return { error: "Sin organización" };
+  const membership = await getActiveMembership(session.user.id);
+  if (membership) await requireWritable(membership.organizerId);
+  if (!membership) return { error: "Sin organización" };
 
   const name = (formData.get("name") as string)?.trim();
   const categoryId = (formData.get("categoryId") as string) || undefined;
@@ -322,7 +332,7 @@ export async function createRankingTable(
 
   await prisma.rankingTable.create({
     data: {
-      organizerId: memberships[0].organizerId,
+      organizerId: membership.organizerId,
       name,
       categoryId: categoryId || null,
       isActive: true,
@@ -330,5 +340,6 @@ export async function createRankingTable(
   });
 
   revalidatePath("/dashboard/ranking");
+  revalidatePath("/ranking");
   return null;
 }

@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { auth } from "@/lib/auth";
-import { getOrganizersByUser } from "@/modules/organizers/queries";
+import { getActiveMembership } from "@/lib/active-organizer";
 import { getDashboardStats, getRecentTournaments, getUpcomingMatches } from "@/modules/dashboard/queries";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -11,10 +11,10 @@ export default async function DashboardPage() {
   const session = await auth();
   if (!session?.user) redirect("/login");
 
-  const memberships = await getOrganizersByUser(session.user.id);
-  if (memberships.length === 0) redirect("/dashboard/jugador");
+  const membership = await getActiveMembership(session.user.id);
+  if (!membership) redirect("/dashboard/jugador");
 
-  const organizer = memberships[0].organizer;
+  const organizer = membership.organizer;
   const [stats, recentTournaments, upcomingMatches] = await Promise.all([
     getDashboardStats(organizer.id),
     getRecentTournaments(organizer.id),
@@ -26,40 +26,56 @@ export default async function DashboardPage() {
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 24, maxWidth: 1280 }}>
 
+      {/* Greeting */}
+      <div>
+        <h1 style={{ fontFamily: "var(--font-space), sans-serif", fontSize: 26, fontWeight: 900, color: "#f8fafc", letterSpacing: "-0.02em", marginBottom: 4 }}>
+          Hola, {firstName} 👋
+        </h1>
+        <p style={{ fontSize: 13, color: "#475569" }}>Este es el resumen de {organizer.name}</p>
+      </div>
+
       {/* Stats */}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 12 }}>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 14 }}>
         <StatCard
           label="Torneos activos"
           value={stats.activeTournaments}
           sub={`de ${stats.totalTournaments} en total`}
           accent="#a3e635"
+          glow="rgba(163,230,53,0.2)"
           href="/dashboard/torneos"
-          icon={<Trophy size={18} />}
+          icon={<Trophy size={20} />}
+          delay={0}
         />
         <StatCard
           label="Inscripciones pendientes"
           value={stats.pendingRegistrations}
           sub="esperando aprobación"
           accent="#fbbf24"
+          glow="rgba(251,191,36,0.2)"
           href="/dashboard/inscripciones"
-          icon={<ClipboardList size={18} />}
+          icon={<ClipboardList size={20} />}
           pulse={stats.pendingRegistrations > 0}
+          delay={1}
         />
         <StatCard
           label="Jugadores"
           value={stats.totalPlayers}
           sub="registrados"
-          accent="#60a5fa"
+          accent="#38bdf8"
+          glow="rgba(56,189,248,0.2)"
           href="/dashboard/jugadores"
-          icon={<Users size={18} />}
+          icon={<Users size={20} />}
+          delay={2}
         />
         <StatCard
           label="Partidos pendientes"
           value={stats.pendingMatches}
           sub="por jugarse"
           accent="#a78bfa"
+          glow="rgba(167,139,250,0.2)"
           href="/dashboard/calendario"
-          icon={<Swords size={18} />}
+          icon={<Swords size={20} />}
+          delay={3}
         />
       </div>
 
@@ -82,26 +98,24 @@ export default async function DashboardPage() {
                   <Link
                     key={t.id}
                     href={`/dashboard/torneos/${t.id}`}
-                    className="row-hover"
+                    className="dash-row"
                     style={{
                       display: "flex", alignItems: "center", gap: 14,
-                      padding: "14px 16px", borderRadius: 10,
-                      background: "var(--bg-elevated)",
-                      border: "1px solid var(--border-default)",
+                      padding: "14px 16px", borderRadius: 12,
                       textDecoration: "none",
                     }}
                   >
                     <Avatar initials={t.name.slice(0, 2).toUpperCase()} />
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
-                        <span style={{ fontWeight: 700, color: "var(--text-primary)", fontSize: 14, fontFamily: "Space Grotesk, sans-serif", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{t.name}</span>
+                        <span style={{ fontWeight: 700, color: "#f1f5f9", fontSize: 14, fontFamily: "var(--font-space), sans-serif", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{t.name}</span>
                         <Badge status={t.status} />
                       </div>
-                      <span style={{ fontSize: 12, color: "var(--text-dimmer)" }}>
+                      <span style={{ fontSize: 12, color: "#475569" }}>
                         {t.categories.length} cat. · {totalPairs} parejas · {new Date(t.startDate).toLocaleDateString("es-AR", { day: "numeric", month: "short", year: "numeric" })}
                       </span>
                     </div>
-                    <span style={{ color: "var(--text-dimmer)", fontSize: 18 }}>›</span>
+                    <span style={{ color: "#475569", fontSize: 18 }}>›</span>
                   </Link>
                 );
               })}
@@ -131,29 +145,29 @@ export default async function DashboardPage() {
                 );
                 return (
                   <div key={match.id} style={{
-                    padding: "12px 14px", borderRadius: 9,
-                    background: "var(--bg-elevated)",
-                    border: "1px solid var(--border-default)",
+                    padding: "12px 14px", borderRadius: 11,
+                    background: "rgba(255,255,255,0.03)",
+                    border: "1px solid rgba(255,255,255,0.06)",
                   }}>
-                    <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, marginBottom: 4 }}>
-                      <span style={{ fontWeight: 600, color: "var(--text-primary)", flex: 1, textAlign: "right", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{names[0] ?? "TBD"}</span>
-                      <span style={{ flexShrink: 0, fontSize: 10, fontWeight: 700, color: "var(--text-faint)", background: "var(--bg-base)", borderRadius: 4, padding: "2px 6px" }}>VS</span>
-                      <span style={{ fontWeight: 600, color: "var(--text-primary)", flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{names[1] ?? "TBD"}</span>
+                    <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, marginBottom: 6 }}>
+                      <span style={{ fontWeight: 700, color: "#f1f5f9", flex: 1, textAlign: "right", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", fontFamily: "var(--font-space), sans-serif" }}>{names[0] ?? "TBD"}</span>
+                      <span style={{ flexShrink: 0, fontSize: 10, fontWeight: 900, color: "#a3e635", background: "rgba(163,230,53,0.12)", border: "1px solid rgba(163,230,53,0.2)", borderRadius: 6, padding: "2px 7px" }}>VS</span>
+                      <span style={{ fontWeight: 700, color: "#f1f5f9", flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", fontFamily: "var(--font-space), sans-serif" }}>{names[1] ?? "TBD"}</span>
                     </div>
-                    <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
                       {match.scheduledAt && (
-                        <span style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 11, color: "var(--text-dimmer)" }}>
+                        <span style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 11, color: "#475569" }}>
                           <Clock size={10} />
                           {new Date(match.scheduledAt).toLocaleTimeString("es-AR", { hour: "2-digit", minute: "2-digit" })}
                         </span>
                       )}
                       {match.scheduleSlot?.venue && (
-                        <span style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 11, color: "var(--text-dimmer)" }}>
+                        <span style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 11, color: "#475569" }}>
                           <MapPin size={10} />
                           {match.scheduleSlot.courtAssignment?.court?.name ?? match.scheduleSlot.venue.name}
                         </span>
                       )}
-                      <span style={{ fontSize: 10, color: "var(--accent)", fontWeight: 600, marginLeft: "auto" }}>
+                      <span style={{ fontSize: 10, color: "#a3e635", fontWeight: 700, marginLeft: "auto" }}>
                         {match.stage.tournamentCategory.category.name}
                       </span>
                     </div>
@@ -170,30 +184,51 @@ export default async function DashboardPage() {
 
 /* ─── Sub-components ─────────────────────────────────────────────────────────── */
 
-function StatCard({ label, value, sub, accent, href, icon, pulse }: {
+function StatCard({ label, value, sub, accent, glow, href, icon, pulse, delay = 0 }: {
   label: string; value: number; sub: string;
-  accent: string; href: string; icon: React.ReactNode; pulse?: boolean;
+  accent: string; glow: string; href: string; icon: React.ReactNode; pulse?: boolean; delay?: number;
 }) {
   return (
     <Link href={href} style={{ textDecoration: "none" }}>
-      <div style={{
-        background: "var(--bg-surface)",
-        border: "1px solid var(--border-default)",
-        borderRadius: 12, padding: 20,
-        display: "flex", flexDirection: "column", gap: 8,
-        cursor: "pointer",
-      }}
+      <div
+        className={`dstat vib-in card-d${delay}`}
+        style={{ ["--vib-glow" as string]: glow, cursor: "pointer" }}
       >
-        <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between" }}>
-          <span style={{ color: accent, opacity: 0.8 }}>{icon}</span>
+        {/* Sheen sweep on pulsing card */}
+        {pulse && <div className="vib-sheen" />}
+
+        {/* Gradient top zone */}
+        <div style={{
+          padding: "16px 18px 14px",
+          background: `linear-gradient(135deg, ${accent}1f 0%, transparent 60%)`,
+          borderBottom: "1px solid rgba(255,255,255,0.05)",
+          display: "flex", alignItems: "center", justifyContent: "space-between",
+        }}>
+          <div style={{
+            width: 40, height: 40, borderRadius: 11,
+            background: `${accent}1f`, border: `1px solid ${accent}40`,
+            display: "flex", alignItems: "center", justifyContent: "center",
+            color: accent, boxShadow: `0 0 16px ${glow}`,
+          }}>
+            {icon}
+          </div>
           {pulse && (
-            <span style={{ width: 7, height: 7, borderRadius: "50%", background: "#fbbf24", display: "inline-block", animation: "pulse-dot 1.5s infinite" }} />
+            <span style={{
+              display: "inline-flex", alignItems: "center", gap: 5,
+              fontSize: 10, fontWeight: 900, color: "#080e1a",
+              background: "#fbbf24", padding: "3px 9px", borderRadius: 7, letterSpacing: "0.04em",
+            }}>
+              <span className="vib-dot" style={{ width: 5, height: 5, borderRadius: "50%", background: "#080e1a" }} />
+              ACCIÓN
+            </span>
           )}
         </div>
-        <div>
-          <div style={{ fontSize: 36, fontWeight: 700, color: accent, lineHeight: 1, fontFamily: "Space Grotesk, sans-serif" }}>{value}</div>
-          <div style={{ fontSize: 12, color: "var(--text-faint)", fontWeight: 500, textTransform: "uppercase", letterSpacing: "0.06em", marginTop: 4 }}>{label}</div>
-          <div style={{ fontSize: 11, color: "var(--text-dimmer)", marginTop: 2 }}>{sub}</div>
+
+        {/* Body */}
+        <div style={{ padding: "14px 18px 18px" }}>
+          <div className="vib-score" style={{ fontSize: 44, color: accent }}>{value}</div>
+          <div style={{ fontSize: 12, color: "#cbd5e1", fontWeight: 700, marginTop: 6 }}>{label}</div>
+          <div style={{ fontSize: 11, color: "#475569", marginTop: 2 }}>{sub}</div>
         </div>
       </div>
     </Link>
@@ -203,9 +238,12 @@ function StatCard({ label, value, sub, accent, href, icon, pulse }: {
 function Surface({ children }: { children: React.ReactNode }) {
   return (
     <div style={{
-      background: "var(--bg-surface)",
-      border: "1px solid var(--border-default)",
-      borderRadius: 12, padding: 20,
+      background: "rgba(12,20,40,0.6)",
+      backdropFilter: "blur(16px)",
+      WebkitBackdropFilter: "blur(16px)",
+      border: "1px solid rgba(255,255,255,0.07)",
+      borderRadius: 16, padding: 20,
+      boxShadow: "0 4px 24px rgba(0,0,0,0.3)",
     }}>
       {children}
     </div>
@@ -215,7 +253,7 @@ function Surface({ children }: { children: React.ReactNode }) {
 function SectionHeader({ title, href, action }: { title: string; href: string; action?: React.ReactNode }) {
   return (
     <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-      <h2 style={{ margin: 0, fontSize: 16, fontWeight: 700, color: "var(--text-primary)", fontFamily: "Space Grotesk, sans-serif" }}>{title}</h2>
+      <h2 style={{ margin: 0, fontSize: 16, fontWeight: 800, color: "#f8fafc", fontFamily: "var(--font-space), sans-serif" }}>{title}</h2>
       {action}
     </div>
   );
@@ -224,12 +262,12 @@ function SectionHeader({ title, href, action }: { title: string; href: string; a
 function Avatar({ initials }: { initials: string }) {
   return (
     <div style={{
-      width: 40, height: 40, borderRadius: 10, flexShrink: 0,
-      background: "var(--accent-15)",
-      border: "1px solid var(--accent-30)",
+      width: 40, height: 40, borderRadius: 11, flexShrink: 0,
+      background: "rgba(163,230,53,0.12)",
+      border: "1px solid rgba(163,230,53,0.28)",
       display: "flex", alignItems: "center", justifyContent: "center",
-      fontSize: 13, fontWeight: 800, color: "var(--accent)",
-      fontFamily: "Space Grotesk, sans-serif",
+      fontSize: 13, fontWeight: 900, color: "#a3e635",
+      fontFamily: "var(--font-space), sans-serif",
     }}>
       {initials}
     </div>
@@ -239,8 +277,8 @@ function Avatar({ initials }: { initials: string }) {
 function EmptyState({ icon, message, action }: { icon: string; message: string; action?: { href: string; label: string } }) {
   return (
     <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "40px 0", gap: 12 }}>
-      <span style={{ fontSize: 36, opacity: 0.3 }}>{icon}</span>
-      <span style={{ fontSize: 13, color: "var(--text-dimmer)" }}>{message}</span>
+      <span style={{ fontSize: 40, opacity: 0.2 }}>{icon}</span>
+      <span style={{ fontSize: 13, color: "#475569" }}>{message}</span>
       {action && (
         <Button variant="ghost" size="sm" asChild>
           <Link href={action.href}>{action.label}</Link>

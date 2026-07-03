@@ -66,6 +66,25 @@ export async function getScheduleByOrganizerMonth(organizerId: string, year: num
   });
 }
 
+export async function getScheduledMatchesByCategory(tournamentCategoryId: string) {
+  return prisma.scheduleSlot.findMany({
+    where: { match: { stage: { tournamentCategoryId } } },
+    include: {
+      venue: true,
+      courtAssignment: { include: { court: true } },
+      match: {
+        include: {
+          teams: {
+            orderBy: { side: "asc" },
+            include: { team: { include: { players: { include: { playerProfile: true } } } } },
+          },
+        },
+      },
+    },
+    orderBy: [{ date: "asc" }, { startTime: "asc" }],
+  });
+}
+
 export async function getVenuesWithCourts(organizerId: string) {
   return prisma.venue.findMany({
     where: { organizerId, isActive: true },

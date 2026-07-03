@@ -4,7 +4,14 @@ import { AuthError } from "next-auth";
 import { signIn, signOut } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { loginSchema, registerSchema } from "./validations";
+import { rateLimitByIp } from "@/lib/rate-limit";
 import bcrypt from "bcryptjs";
+
+// Solo aceptar paths relativos internos como callback (anti open-redirect).
+function safeCallbackUrl(raw: unknown, fallback: string): string {
+  if (typeof raw !== "string") return fallback;
+  return raw.startsWith("/") && !raw.startsWith("//") ? raw : fallback;
+}
 
 export type PortalAuthState = {
   error?: string;
@@ -22,7 +29,12 @@ export async function loginPortal(
     return { fieldErrors: parsed.error.flatten().fieldErrors };
   }
 
-  const callbackUrl = (formData.get("callbackUrl") as string) || "/torneos";
+  // Máx. 10 intentos de login por IP cada 5 minutos
+  if (!(await rateLimitByIp("login", 10, 5 * 60 * 1000))) {
+    return { error: "Demasiados intentos. Esperá unos minutos y volvé a intentar." };
+  }
+
+  const callbackUrl = safeCallbackUrl(formData.get("callbackUrl"), "/torneos");
 
   try {
     await signIn("credentials", {
@@ -53,6 +65,11 @@ export async function registerPortal(
 
   if (!parsed.success) {
     return { fieldErrors: parsed.error.flatten().fieldErrors };
+  }
+
+  // Máx. 5 registros por IP por hora
+  if (!(await rateLimitByIp("register", 5, 60 * 60 * 1000))) {
+    return { error: "Demasiados intentos. Esperá unos minutos y volvé a intentar." };
   }
 
   const { email, password, firstName, lastName } = parsed.data;

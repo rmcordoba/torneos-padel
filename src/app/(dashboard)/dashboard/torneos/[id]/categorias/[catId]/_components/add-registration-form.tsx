@@ -9,7 +9,6 @@ interface PlayerResult {
   firstName: string;
   lastName: string;
   email: string | null;
-  dni: string | null;
 }
 
 interface AddRegistrationFormProps {
@@ -45,7 +44,7 @@ export function AddRegistrationForm({
     return (
       <button
         onClick={() => setOpen(true)}
-        className="flex items-center gap-2 rounded-xl border-2 border-dashed border-emerald-300 bg-emerald-50/50 px-4 py-3 text-sm font-semibold text-emerald-700 hover:bg-emerald-50 hover:border-emerald-400 transition-all w-full justify-center"
+        className="flex items-center gap-2 rounded-xl border border-dashed border-lime-400/40 bg-lime-400/[0.06] px-4 py-3 text-sm font-bold text-lime-400 hover:bg-lime-400/[0.12] hover:border-lime-400/60 transition-all w-full justify-center"
       >
         <UserPlus className="h-4 w-4" />
         {isFull ? "Agregar a lista de espera" : "Inscribir pareja"}
@@ -54,18 +53,18 @@ export function AddRegistrationForm({
   }
 
   return (
-    <div className="rounded-2xl border-2 border-emerald-200 bg-white shadow-sm overflow-hidden">
+    <div className="rounded-2xl border border-lime-400/25 bg-[rgba(12,20,40,0.7)] shadow-[0_4px_20px_rgba(0,0,0,0.3)] overflow-hidden">
       {/* Header */}
-      <div className="flex items-center justify-between px-5 py-4 bg-emerald-50 border-b border-emerald-100">
+      <div className="flex items-center justify-between px-5 py-4 bg-lime-400/[0.08] border-b border-lime-400/15">
         <div className="flex items-center gap-2">
-          <UserPlus className="h-4 w-4 text-emerald-600" />
-          <span className="text-sm font-bold text-slate-900">
+          <UserPlus className="h-4 w-4 text-lime-400" />
+          <span className="text-sm font-extrabold text-slate-100 font-display">
             {isFull ? "Agregar a lista de espera" : "Inscribir nueva pareja"}
           </span>
         </div>
         <button
           onClick={() => setOpen(false)}
-          className="h-7 w-7 flex items-center justify-center rounded-lg text-slate-400 hover:bg-slate-100 hover:text-slate-700 transition-colors"
+          className="h-7 w-7 flex items-center justify-center rounded-lg text-slate-500 hover:bg-white/[0.06] hover:text-slate-200 transition-colors"
         >
           <X className="h-4 w-4" />
         </button>
@@ -78,21 +77,21 @@ export function AddRegistrationForm({
         {player2 && <input type="hidden" name="player2Id" value={player2.id} />}
 
         {state?.error && (
-          <div className="flex items-center gap-2 rounded-lg bg-red-50 border border-red-200 px-3 py-2.5 text-sm text-red-700">
+          <div className="flex items-center gap-2 rounded-lg bg-rose-500/10 border border-rose-500/25 px-3 py-2.5 text-sm text-rose-400">
             <AlertCircle className="h-4 w-4 shrink-0" />
             {state.error}
           </div>
         )}
 
         {isFull && (
-          <div className="rounded-lg bg-amber-50 border border-amber-200 px-3 py-2.5 text-sm text-amber-700">
+          <div className="rounded-lg bg-amber-400/10 border border-amber-400/25 px-3 py-2.5 text-sm text-amber-400">
             El cupo está lleno. La pareja se agregará a la lista de espera.
           </div>
         )}
 
         {/* Player 1 */}
         <div className="space-y-1.5">
-          <label className="text-sm font-semibold text-slate-700">Jugador 1</label>
+          <label className="text-sm font-bold text-slate-300">Jugador 1</label>
           <PlayerSearchInput
             value={player1}
             onSelect={setPlayer1}
@@ -103,7 +102,7 @@ export function AddRegistrationForm({
 
         {/* Player 2 */}
         <div className="space-y-1.5">
-          <label className="text-sm font-semibold text-slate-700">Jugador 2</label>
+          <label className="text-sm font-bold text-slate-300">Jugador 2</label>
           <PlayerSearchInput
             value={player2}
             onSelect={setPlayer2}
@@ -116,23 +115,23 @@ export function AddRegistrationForm({
         {player1 && player2 && (
           <div className="flex items-center gap-3 py-2">
             <PlayerPill player={player1} />
-            <span className="shrink-0 rounded-md bg-slate-100 px-2 py-1 text-xs font-bold text-slate-500">VS</span>
+            <span className="shrink-0 rounded-md bg-lime-400/15 border border-lime-400/25 px-2 py-1 text-xs font-extrabold text-lime-400">VS</span>
             <PlayerPill player={player2} />
           </div>
         )}
 
-        <div className="flex justify-end gap-2 pt-1 border-t border-slate-100">
+        <div className="flex justify-end gap-2 pt-3 border-t border-white/[0.06]">
           <button
             type="button"
             onClick={() => setOpen(false)}
-            className="rounded-lg px-4 py-2 text-sm font-medium text-slate-600 hover:bg-slate-100 transition-colors"
+            className="rounded-lg px-4 py-2 text-sm font-semibold text-slate-400 hover:bg-white/[0.05] transition-colors"
           >
             Cancelar
           </button>
           <button
             type="submit"
             disabled={!player1 || !player2 || isPending}
-            className="flex items-center gap-2 rounded-lg bg-emerald-600 px-5 py-2 text-sm font-semibold text-white shadow-sm hover:bg-emerald-700 transition-colors disabled:opacity-50 disabled:pointer-events-none"
+            className="flex items-center gap-2 rounded-lg bg-lime-400 px-5 py-2 text-sm font-extrabold text-[#080e1a] shadow-[0_0_20px_rgba(163,230,53,0.3)] hover:bg-lime-300 transition-colors disabled:opacity-50 disabled:pointer-events-none disabled:shadow-none"
           >
             {isPending ? (
               <><Loader2 className="h-4 w-4 animate-spin" /> Procesando...</>
@@ -199,16 +198,16 @@ function PlayerSearchInput({
 
   if (value) {
     return (
-      <div className="flex items-center gap-3 rounded-xl border border-emerald-300 bg-emerald-50 px-3 py-2.5">
+      <div className="flex items-center gap-3 rounded-xl border border-lime-400/30 bg-lime-400/[0.08] px-3 py-2.5">
         <PlayerAvatar name={`${value.firstName} ${value.lastName}`} size="sm" />
         <div className="flex-1 min-w-0">
-          <p className="text-sm font-semibold text-slate-900">{value.firstName} {value.lastName}</p>
+          <p className="text-sm font-bold text-slate-100">{value.firstName} {value.lastName}</p>
           <p className="text-xs text-slate-500 truncate">{value.email}</p>
         </div>
         <button
           type="button"
           onClick={() => onSelect(null)}
-          className="text-slate-400 hover:text-red-500 transition-colors"
+          className="text-slate-500 hover:text-rose-400 transition-colors"
         >
           <X className="h-4 w-4" />
         </button>
@@ -219,38 +218,38 @@ function PlayerSearchInput({
   return (
     <div ref={containerRef} className="relative">
       <div className="relative">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 pointer-events-none" />
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500 pointer-events-none" />
         <input
           type="text"
           value={query}
           onChange={handleChange}
           onFocus={() => setOpen(true)}
           placeholder={placeholder}
-          className="flex h-10 w-full rounded-xl border border-slate-200 bg-white pl-9 pr-3 text-sm placeholder:text-slate-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500"
+          className="flex h-10 w-full rounded-xl border border-white/[0.08] bg-white/[0.05] pl-9 pr-3 text-sm text-slate-100 placeholder:text-slate-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-lime-400/40"
         />
         {loading && (
-          <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 animate-spin" />
+          <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500 animate-spin" />
         )}
       </div>
 
       {open && (results.length > 0 || (query.length >= 2 && !loading)) && (
-        <div className="absolute z-50 mt-1 w-full rounded-xl border border-slate-200 bg-white shadow-lg overflow-hidden">
+        <div className="absolute z-50 mt-1 w-full rounded-xl border border-white/[0.09] bg-[rgba(8,16,36,0.97)] backdrop-blur-xl shadow-[0_12px_40px_rgba(0,0,0,0.5)] overflow-hidden">
           {results.length === 0 ? (
             <div className="px-4 py-3 text-sm text-slate-500 text-center">
-              No se encontraron jugadores para "{query}"
+              No se encontraron jugadores para &quot;{query}&quot;
             </div>
           ) : (
-            <ul className="max-h-52 overflow-y-auto divide-y divide-slate-100">
+            <ul className="max-h-52 overflow-y-auto divide-y divide-white/[0.05]">
               {results.map((p) => (
                 <li key={p.id}>
                   <button
                     type="button"
-                    className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-emerald-50 transition-colors text-left"
+                    className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-lime-400/[0.08] transition-colors text-left"
                     onClick={() => { onSelect(p); setQuery(""); setOpen(false); setResults([]); }}
                   >
                     <PlayerAvatar name={`${p.firstName} ${p.lastName}`} size="sm" />
                     <div className="min-w-0">
-                      <p className="text-sm font-semibold text-slate-900">{p.firstName} {p.lastName}</p>
+                      <p className="text-sm font-bold text-slate-100">{p.firstName} {p.lastName}</p>
                       <p className="text-xs text-slate-500 truncate">{p.email}</p>
                     </div>
                   </button>
@@ -268,9 +267,9 @@ function PlayerSearchInput({
 
 function PlayerPill({ player }: { player: PlayerResult }) {
   return (
-    <div className="flex flex-1 items-center gap-2 min-w-0 rounded-lg bg-slate-50 border border-slate-200 px-2.5 py-1.5">
+    <div className="flex flex-1 items-center gap-2 min-w-0 rounded-lg bg-white/[0.04] border border-white/[0.08] px-2.5 py-1.5">
       <PlayerAvatar name={`${player.firstName} ${player.lastName}`} size="xs" />
-      <span className="text-xs font-semibold text-slate-700 truncate">
+      <span className="text-xs font-bold text-slate-300 truncate">
         {player.lastName}, {player.firstName}
       </span>
     </div>
@@ -281,7 +280,7 @@ function PlayerAvatar({ name, size = "sm" }: { name: string; size?: "xs" | "sm" 
   const initials = name.split(" ").map((n) => n[0]).slice(0, 2).join("").toUpperCase();
   const sizeClass = size === "xs" ? "h-6 w-6 text-[10px]" : "h-8 w-8 text-xs";
   return (
-    <div className={`shrink-0 flex items-center justify-center rounded-full bg-gradient-to-br from-emerald-400 to-teal-500 font-bold text-white ${sizeClass}`}>
+    <div className={`shrink-0 flex items-center justify-center rounded-lg bg-gradient-to-br from-lime-400 to-emerald-500 font-extrabold text-[#080e1a] font-display ${sizeClass}`}>
       {initials}
     </div>
   );

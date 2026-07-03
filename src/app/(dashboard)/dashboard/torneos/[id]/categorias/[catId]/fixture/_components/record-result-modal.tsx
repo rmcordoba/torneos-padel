@@ -70,15 +70,15 @@ export function RecordResultModal({ match, onClose, returnPath, mode = "record" 
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
-      <div className="w-full max-w-md rounded-2xl bg-white shadow-xl overflow-hidden">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-md">
+      <div className="w-full max-w-md rounded-2xl bg-[rgba(8,16,36,0.97)] border border-white/[0.09] shadow-[0_24px_64px_rgba(0,0,0,0.6)] overflow-hidden backdrop-blur-xl">
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 bg-slate-50">
-          <h2 className="text-sm font-bold text-slate-900">{mode === "edit" ? "Editar resultado" : "Cargar resultado"}</h2>
+        <div className="flex items-center justify-between px-6 py-4 border-b border-white/[0.07] bg-lime-400/[0.06]">
+          <h2 className="text-sm font-extrabold text-slate-100 font-display">{mode === "edit" ? "Editar resultado" : "Cargar resultado"}</h2>
           <button
             type="button"
             onClick={onClose}
-            className="h-7 w-7 flex items-center justify-center rounded-lg text-slate-400 hover:bg-slate-200 transition-colors"
+            className="h-7 w-7 flex items-center justify-center rounded-lg text-slate-500 hover:bg-white/[0.08] hover:text-slate-200 transition-colors"
           >
             <X className="h-4 w-4" />
           </button>
@@ -93,20 +93,20 @@ export function RecordResultModal({ match, onClose, returnPath, mode = "record" 
           )}
 
           {/* Teams display */}
-          <div className="flex items-center gap-3 rounded-xl bg-slate-50 p-3">
-            <div className="flex-1 text-center">
-              <p className="text-xs font-bold text-slate-900 truncate">{team1Name}</p>
-              <p className="text-[10px] text-slate-400">Equipo 1</p>
+          <div className="flex items-center gap-3 rounded-xl bg-white/[0.04] border border-white/[0.06] p-3">
+            <div className="flex-1 text-center min-w-0">
+              <p className="text-xs font-bold text-slate-100 truncate font-display">{team1Name}</p>
+              <p className="text-[10px] text-slate-500">Equipo 1</p>
             </div>
-            <span className="text-xs font-bold text-slate-300">VS</span>
-            <div className="flex-1 text-center">
-              <p className="text-xs font-bold text-slate-900 truncate">{team2Name}</p>
-              <p className="text-[10px] text-slate-400">Equipo 2</p>
+            <span className="text-xs font-extrabold text-lime-400 shrink-0">VS</span>
+            <div className="flex-1 text-center min-w-0">
+              <p className="text-xs font-bold text-slate-100 truncate font-display">{team2Name}</p>
+              <p className="text-[10px] text-slate-500">Equipo 2</p>
             </div>
           </div>
 
           {state?.error && (
-            <div className="flex items-center gap-2 rounded-lg bg-red-50 border border-red-200 px-3 py-2 text-sm text-red-700">
+            <div className="flex items-center gap-2 rounded-lg bg-rose-500/10 border border-rose-500/25 px-3 py-2 text-sm text-rose-400">
               <AlertCircle className="h-4 w-4 shrink-0" />
               {state.error}
             </div>
@@ -117,7 +117,7 @@ export function RecordResultModal({ match, onClose, returnPath, mode = "record" 
             <div
               className={cn(
                 "h-5 w-9 rounded-full transition-colors relative",
-                isWalkover ? "bg-amber-500" : "bg-slate-200"
+                isWalkover ? "bg-amber-400" : "bg-white/[0.1]"
               )}
               onClick={() => setIsWalkover(!isWalkover)}
             >
@@ -126,22 +126,22 @@ export function RecordResultModal({ match, onClose, returnPath, mode = "record" 
                 isWalkover ? "translate-x-4" : "translate-x-0.5"
               )} />
             </div>
-            <span className="text-sm font-semibold text-slate-700">Walkover / W.O.</span>
+            <span className="text-sm font-bold text-slate-300">Walkover / W.O.</span>
           </label>
 
           {isWalkover ? (
             <div className="space-y-2">
-              <p className="text-xs font-semibold text-slate-600">¿Qué equipo gana por walkover?</p>
+              <p className="text-xs font-bold text-slate-400">¿Qué equipo gana por walkover?</p>
               <div className="grid grid-cols-2 gap-2">
                 {side1 && (
                   <button
                     type="button"
                     onClick={() => setWalkoverId(side1.teamId)}
                     className={cn(
-                      "rounded-xl border py-2.5 px-3 text-xs font-semibold transition-all",
+                      "rounded-xl border py-2.5 px-3 text-xs font-bold transition-all",
                       walkoverId === side1.teamId
-                        ? "border-emerald-500 bg-emerald-50 text-emerald-700"
-                        : "border-slate-200 text-slate-600 hover:border-slate-300"
+                        ? "border-lime-400/40 bg-lime-400/15 text-lime-400"
+                        : "border-white/[0.08] bg-white/[0.03] text-slate-400 hover:border-white/[0.15]"
                     )}
                   >
                     {team1Name.split(" / ")[0]}
@@ -152,10 +152,10 @@ export function RecordResultModal({ match, onClose, returnPath, mode = "record" 
                     type="button"
                     onClick={() => setWalkoverId(side2.teamId)}
                     className={cn(
-                      "rounded-xl border py-2.5 px-3 text-xs font-semibold transition-all",
+                      "rounded-xl border py-2.5 px-3 text-xs font-bold transition-all",
                       walkoverId === side2.teamId
-                        ? "border-emerald-500 bg-emerald-50 text-emerald-700"
-                        : "border-slate-200 text-slate-600 hover:border-slate-300"
+                        ? "border-lime-400/40 bg-lime-400/15 text-lime-400"
+                        : "border-white/[0.08] bg-white/[0.03] text-slate-400 hover:border-white/[0.15]"
                     )}
                   >
                     {team2Name.split(" / ")[0]}
@@ -167,7 +167,7 @@ export function RecordResultModal({ match, onClose, returnPath, mode = "record" 
             <>
               {/* Sets */}
               <div className="space-y-3">
-                <div className="grid grid-cols-[1fr_auto_1fr_auto] gap-x-2 text-[10px] font-bold text-slate-400 uppercase tracking-wide px-1">
+                <div className="grid grid-cols-[1fr_auto_1fr_auto] gap-x-2 text-[10px] font-extrabold text-slate-500 uppercase tracking-wide px-1">
                   <span className="truncate">{team1Name.split(" / ")[0]}</span>
                   <span />
                   <span className="truncate text-right">{team2Name.split(" / ")[0]}</span>
@@ -189,9 +189,9 @@ export function RecordResultModal({ match, onClose, returnPath, mode = "record" 
                       placeholder="0"
                       value={set.games1}
                       onChange={(e) => updateSet(idx, "games1", e.target.value)}
-                      className="h-10 w-full rounded-xl border border-slate-200 text-center text-sm font-bold focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                      className="h-11 w-full rounded-xl border border-white/[0.08] bg-white/[0.05] text-slate-100 text-center text-base font-extrabold font-display focus:outline-none focus:ring-2 focus:ring-lime-400/40 [color-scheme:dark]"
                     />
-                    <span className="text-slate-300 font-bold text-sm">–</span>
+                    <span className="text-slate-600 font-bold text-sm">–</span>
                     <input
                       type="number"
                       min={0}
@@ -199,13 +199,13 @@ export function RecordResultModal({ match, onClose, returnPath, mode = "record" 
                       placeholder="0"
                       value={set.games2}
                       onChange={(e) => updateSet(idx, "games2", e.target.value)}
-                      className="h-10 w-full rounded-xl border border-slate-200 text-center text-sm font-bold focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                      className="h-11 w-full rounded-xl border border-white/[0.08] bg-white/[0.05] text-slate-100 text-center text-base font-extrabold font-display focus:outline-none focus:ring-2 focus:ring-lime-400/40 [color-scheme:dark]"
                     />
                     <button
                       type="button"
                       onClick={() => removeSet(idx)}
                       disabled={sets.length === 1}
-                      className="h-8 w-8 flex items-center justify-center rounded-lg text-slate-300 hover:text-red-500 hover:bg-red-50 transition-colors disabled:pointer-events-none"
+                      className="h-8 w-8 flex items-center justify-center rounded-lg text-slate-500 hover:text-rose-400 hover:bg-rose-500/10 transition-colors disabled:pointer-events-none disabled:opacity-30"
                     >
                       <Trash2 className="h-3.5 w-3.5" />
                     </button>
@@ -216,7 +216,7 @@ export function RecordResultModal({ match, onClose, returnPath, mode = "record" 
                   <button
                     type="button"
                     onClick={addSet}
-                    className="flex items-center gap-1.5 text-xs text-slate-400 hover:text-emerald-600 transition-colors font-semibold"
+                    className="flex items-center gap-1.5 text-xs text-slate-500 hover:text-lime-400 transition-colors font-bold"
                   >
                     <Plus className="h-3.5 w-3.5" /> Agregar set
                   </button>
@@ -226,18 +226,18 @@ export function RecordResultModal({ match, onClose, returnPath, mode = "record" 
           )}
 
           {/* Actions */}
-          <div className="flex justify-end gap-2 pt-1 border-t border-slate-100">
+          <div className="flex justify-end gap-2 pt-3 border-t border-white/[0.06]">
             <button
               type="button"
               onClick={onClose}
-              className="rounded-lg px-4 py-2 text-sm font-medium text-slate-600 hover:bg-slate-100 transition-colors"
+              className="rounded-lg px-4 py-2 text-sm font-semibold text-slate-400 hover:bg-white/[0.05] transition-colors"
             >
               Cancelar
             </button>
             <button
               type="submit"
               disabled={isPending || (isWalkover && !walkoverId) || (!isWalkover && sets.every((s) => !s.games1 && !s.games2))}
-              className="flex items-center gap-2 rounded-lg bg-emerald-600 px-5 py-2 text-sm font-semibold text-white hover:bg-emerald-700 transition-colors disabled:opacity-50 disabled:pointer-events-none"
+              className="flex items-center gap-2 rounded-lg bg-lime-400 px-5 py-2 text-sm font-extrabold text-[#080e1a] shadow-[0_0_20px_rgba(163,230,53,0.3)] hover:bg-lime-300 transition-colors disabled:opacity-50 disabled:pointer-events-none disabled:shadow-none"
             >
               {isPending
                 ? <><Loader2 className="h-4 w-4 animate-spin" /> Guardando...</>

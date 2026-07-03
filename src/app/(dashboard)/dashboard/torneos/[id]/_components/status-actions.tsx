@@ -79,7 +79,8 @@ export function StatusActions({ tournamentId, status }: Props) {
           <button
             onClick={() => handleTransition(primary.to)}
             disabled={isPending}
-            className="flex items-center gap-1.5 rounded-lg bg-emerald-500 hover:bg-emerald-400 disabled:opacity-60 px-3 py-1.5 text-xs font-semibold text-white transition-colors"
+            className="flex items-center justify-center gap-1.5 rounded-lg disabled:opacity-60 px-4 py-2 text-xs font-extrabold transition-colors"
+            style={{ background: "#a3e635", color: "#080e1a", boxShadow: "0 0 20px rgba(163,230,53,0.3)" }}
           >
             {isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : primary.icon}
             {primary.label}

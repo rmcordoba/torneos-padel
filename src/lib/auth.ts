@@ -12,6 +12,10 @@ const credentialsSchema = z.object({
   password: z.string().min(8),
 });
 
+// Hash dummy para igualar el tiempo de respuesta cuando el usuario no existe
+// (evita enumerar emails midiendo la latencia del login).
+const DUMMY_HASH = bcrypt.hashSync("dummy-password-for-timing", 12);
+
 export const { handlers, auth, signIn, signOut } = NextAuth({
   adapter: PrismaAdapter(prisma),
   session: { strategy: "jwt" },
@@ -33,7 +37,12 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           where: { email: parsed.data.email },
         });
 
-        if (!user?.password || !user.isActive) return null;
+        if (!user?.password || !user.isActive) {
+          // Comparación dummy: mismo costo que un login real para no filtrar
+          // por timing si el email existe o no.
+          await bcrypt.compare(parsed.data.password, DUMMY_HASH);
+          return null;
+        }
 
         const passwordMatch = await bcrypt.compare(
           parsed.data.password,

@@ -47,10 +47,10 @@ export default async function PerfilPage() {
     <div style={{ display: "flex", flexDirection: "column", gap: 20, maxWidth: 680 }}>
 
       <div>
-        <h1 style={{ margin: 0, fontSize: 24, fontWeight: 800, color: "var(--text-primary)", fontFamily: "Space Grotesk, sans-serif" }}>
+        <h1 style={{ margin: 0, fontSize: 24, fontWeight: 800, color: "#f8fafc", fontFamily: "var(--font-space), sans-serif" }}>
           Mi Perfil
         </h1>
-        <p style={{ margin: "6px 0 0", fontSize: 13, color: "var(--text-dimmer)" }}>
+        <p style={{ margin: "6px 0 0", fontSize: 13, color: "#475569" }}>
           Información de tu cuenta
         </p>
       </div>
@@ -60,19 +60,19 @@ export default async function PerfilPage() {
         <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
           <div style={{
             width: 52, height: 52, borderRadius: 14, flexShrink: 0,
-            background: "var(--accent-15)", border: "2px solid var(--accent-30)",
+            background: "rgba(163,230,53,0.12)", border: "2px solid rgba(163,230,53,0.28)",
             display: "flex", alignItems: "center", justifyContent: "center",
-            fontSize: 18, fontWeight: 800, color: "var(--accent)",
-            fontFamily: "Space Grotesk, sans-serif",
+            fontSize: 18, fontWeight: 800, color: "#a3e635",
+            fontFamily: "var(--font-space), sans-serif",
           }}>
             {initials}
           </div>
           <div style={{ display: "flex", flexDirection: "column", gap: 3 }}>
-            <div style={{ fontSize: 15, fontWeight: 700, color: "var(--text-primary)", fontFamily: "Space Grotesk, sans-serif" }}>
+            <div style={{ fontSize: 15, fontWeight: 700, color: "#f8fafc", fontFamily: "var(--font-space), sans-serif" }}>
               {user.name}
             </div>
-            <div style={{ fontSize: 13, color: "var(--text-secondary)" }}>{user.email}</div>
-            <div style={{ fontSize: 11, color: "var(--text-faint)" }}>
+            <div style={{ fontSize: 13, color: "#e2e8f0" }}>{user.email}</div>
+            <div style={{ fontSize: 11, color: "#64748b" }}>
               Cuenta creada el{" "}
               {user.createdAt.toLocaleDateString("es-AR", { day: "2-digit", month: "long", year: "numeric" })}
             </div>
@@ -99,7 +99,7 @@ export default async function PerfilPage() {
         {hasPassword ? (
           <ChangePasswordForm />
         ) : (
-          <p style={{ margin: 0, fontSize: 13, color: "var(--text-dimmer)" }}>
+          <p style={{ margin: 0, fontSize: 13, color: "#475569" }}>
             Tu cuenta usa inicio de sesión externo (Google u otro proveedor). No podés cambiar la contraseña desde aquí.
           </p>
         )}
@@ -111,13 +111,13 @@ export default async function PerfilPage() {
 function Card({ icon, title, children }: { icon: React.ReactNode; title: string; children: React.ReactNode }) {
   return (
     <div style={{
-      background: "var(--bg-surface)",
-      border: "1px solid var(--border-default)",
+      background: "rgba(12,20,40,0.7)",
+      border: "1px solid rgba(255,255,255,0.07)",
       borderRadius: 14, padding: "20px 24px",
     }}>
-      <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 18, paddingBottom: 14, borderBottom: "1px solid var(--border-subtle)" }}>
-        <span style={{ color: "var(--accent)" }}>{icon}</span>
-        <h2 style={{ margin: 0, fontSize: 14, fontWeight: 700, color: "var(--text-primary)", fontFamily: "Space Grotesk, sans-serif" }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 18, paddingBottom: 14, borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
+        <span style={{ color: "#a3e635" }}>{icon}</span>
+        <h2 style={{ margin: 0, fontSize: 14, fontWeight: 700, color: "#f8fafc", fontFamily: "var(--font-space), sans-serif" }}>
           {title}
         </h2>
       </div>

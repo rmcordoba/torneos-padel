@@ -48,7 +48,7 @@ export default async function EditCategoryPage({
       </nav>
 
       <div>
-        <h1 style={{ fontSize: 22, fontWeight: 800, color: "var(--text-primary)", fontFamily: "Space Grotesk, sans-serif", margin: 0 }}>
+        <h1 style={{ fontSize: 22, fontWeight: 800, color: "var(--text-primary)", fontFamily: "var(--font-space), sans-serif", margin: 0 }}>
           Editar categoría
         </h1>
         <p style={{ fontSize: 13, color: "var(--text-dimmer)", marginTop: 4 }}>{tc.category.name}</p>

@@ -71,95 +71,91 @@ export default async function CategoryPage({
   const returnPath = `/dashboard/torneos/${tournamentId}/categorias/${catId}`;
   const pct = Math.round((tc.counts.approved / tc.maxTeams) * 100);
 
+  const capColor = pct >= 100 ? "#f43f5e" : pct >= 80 ? "#fb923c" : "#a3e635";
+
   return (
     <div className="max-w-4xl space-y-6">
 
       {/* Breadcrumb */}
-      <nav className="flex items-center gap-2 text-sm">
-        <Link href="/dashboard/torneos" className="text-slate-400 hover:text-slate-700 transition-colors">
-          Torneos
-        </Link>
-        <span className="text-slate-300">/</span>
-        <Link
-          href={`/dashboard/torneos/${tournamentId}`}
-          className="text-slate-400 hover:text-slate-700 transition-colors truncate max-w-[160px]"
-        >
+      <nav style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 13 }}>
+        <Link href="/dashboard/torneos" style={{ color: "#475569", textDecoration: "none" }}>Torneos</Link>
+        <span style={{ color: "#334155" }}>/</span>
+        <Link href={`/dashboard/torneos/${tournamentId}`} style={{ color: "#475569", textDecoration: "none", maxWidth: 160, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
           {tc.tournament.name}
         </Link>
-        <span className="text-slate-300">/</span>
-        <span className="font-semibold text-slate-900 truncate">{tc.category.name}</span>
+        <span style={{ color: "#334155" }}>/</span>
+        <span style={{ fontWeight: 700, color: "#94a3b8", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{tc.category.name}</span>
       </nav>
 
       {/* Header de la categoría */}
-      <div className="rounded-2xl border border-slate-200 bg-white shadow-sm overflow-hidden">
-        {/* Franja de color según cupo */}
-        <div
-          className="h-1.5 w-full transition-all duration-500"
-          style={{
-            background: pct >= 100
-              ? "linear-gradient(90deg, #ef4444, #dc2626)"
-              : pct >= 80
-              ? "linear-gradient(90deg, #f59e0b, #d97706)"
-              : "linear-gradient(90deg, #10b981, #059669)",
-          }}
-        />
+      <div style={{
+        borderRadius: 18, overflow: "hidden",
+        border: "1px solid rgba(255,255,255,0.07)",
+        background: "rgba(12,20,40,0.7)",
+        backdropFilter: "blur(16px)", WebkitBackdropFilter: "blur(16px)",
+        boxShadow: "0 8px 32px rgba(0,0,0,0.35)",
+      }}>
+        {/* Franja de cupo */}
+        <div style={{ height: 5, width: "100%", background: capColor, boxShadow: `0 0 12px ${capColor}` }} />
 
-        <div className="flex items-start justify-between gap-4 p-6">
-          <div className="flex items-start gap-4">
-            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-emerald-50 text-emerald-600">
-              <Trophy className="h-6 w-6" />
+        <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 16, padding: 24 }}>
+          <div style={{ display: "flex", alignItems: "flex-start", gap: 16 }}>
+            <div style={{ width: 52, height: 52, flexShrink: 0, borderRadius: 14, background: "rgba(163,230,53,0.12)", border: "1px solid rgba(163,230,53,0.28)", display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 0 20px rgba(163,230,53,0.12)" }}>
+              <Trophy size={24} color="#a3e635" />
             </div>
             <div>
-              <div className="flex items-center gap-2 flex-wrap">
-                <h1 className="text-xl font-bold text-slate-900">{tc.category.name}</h1>
+              <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+                <h1 style={{ fontSize: 24, fontWeight: 900, color: "#f8fafc", fontFamily: "var(--font-space), sans-serif", letterSpacing: "-0.02em" }}>{tc.category.name}</h1>
                 <Badge variant={(STATUS_VARIANT[tc.status] ?? "outline") as "default"}>
                   {STATUS_LABEL[tc.status] ?? tc.status}
                 </Badge>
               </div>
-              <p className="text-sm text-slate-500 mt-1">{tc.tournament.name}</p>
+              <p style={{ fontSize: 13, color: "#475569", marginTop: 4 }}>{tc.tournament.name}</p>
+
+              {/* Cupo progress */}
+              <div style={{ marginTop: 14, width: 280, maxWidth: "100%" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 5 }}>
+                  <span style={{ fontSize: 11, color: "#64748b", fontWeight: 600 }}>Cupo ocupado</span>
+                  <span style={{ fontSize: 11, fontWeight: 800, color: capColor, fontFamily: "var(--font-space), sans-serif" }}>{tc.counts.approved}/{tc.maxTeams} · {pct}%</span>
+                </div>
+                <div style={{ height: 6, borderRadius: 6, background: "rgba(255,255,255,0.06)", overflow: "hidden" }}>
+                  <div style={{ height: "100%", width: `${Math.min(pct, 100)}%`, background: capColor, borderRadius: 6, boxShadow: `0 0 8px ${capColor}88`, transition: "width .4s" }} />
+                </div>
+              </div>
             </div>
           </div>
           <CategoryStatusActions tcId={catId} currentStatus={tc.status as TournamentCategoryStatus} tournamentId={tournamentId} />
         </div>
 
-        {/* Métricas de la categoría */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 divide-x divide-y sm:divide-y-0 divide-slate-100 border-t border-slate-100">
-          <MetricCell
-            icon={<Users className="h-4 w-4 text-emerald-500" />}
-            label="Cupo"
-            value={`${tc.maxTeams} parejas`}
-          />
-          <MetricCell
-            icon={FORMAT_ICON[tc.format] ?? <Trophy className="h-4 w-4 text-blue-500" />}
-            label="Formato"
-            value={FORMAT_LABEL[tc.format] ?? tc.format}
-          />
-          <MetricCell
-            icon={<Swords className="h-4 w-4 text-purple-500" />}
-            label="Sets / Games"
-            value={`${tc.setsPerMatch} sets · ${tc.gamesPerSet} games`}
-          />
-          <MetricCell
-            icon={<DollarSign className="h-4 w-4 text-amber-500" />}
-            label="Arancel"
-            value={tc.pricePerTeam ? `$${Number(tc.pricePerTeam).toLocaleString("es-AR")}` : "Sin costo"}
-          />
+        {/* Métricas */}
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", borderTop: "1px solid rgba(255,255,255,0.06)" }}>
+          <MetricCell icon={<Users size={15} color="#a3e635" />} label="Cupo" value={`${tc.maxTeams} parejas`} idx={0} />
+          <MetricCell icon={FORMAT_ICON[tc.format] ?? <Trophy size={15} color="#38bdf8" />} label="Formato" value={FORMAT_LABEL[tc.format] ?? tc.format} idx={1} />
+          <MetricCell icon={<Swords size={15} color="#a78bfa" />} label="Sets / Games" value={`${tc.setsPerMatch}×${tc.gamesPerSet}`} idx={2} />
+          <MetricCell icon={<DollarSign size={15} color="#fbbf24" />} label="Arancel" value={tc.pricePerTeam ? `$${Number(tc.pricePerTeam).toLocaleString("es-AR")}` : "Gratis"} idx={3} />
         </div>
       </div>
 
-      {/* Manager de inscripciones */}
       {/* Fixture link */}
       <Link
         href={`/dashboard/torneos/${tournamentId}/categorias/${catId}/fixture`}
-        className="flex items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 hover:bg-slate-50 hover:border-slate-300 transition-all shadow-sm"
+        style={{
+          display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
+          borderRadius: 12, padding: "13px",
+          border: "1px solid rgba(56,189,248,0.25)",
+          background: "rgba(56,189,248,0.08)",
+          color: "#38bdf8", fontSize: 14, fontWeight: 800, textDecoration: "none",
+          fontFamily: "var(--font-space), sans-serif",
+        }}
       >
-        <Swords className="h-4 w-4 text-blue-500" /> Ver / gestionar fixture
+        <Swords size={16} /> Ver / gestionar fixture
       </Link>
 
       <RegistrationManager
         tournamentCategoryId={catId}
         maxTeams={tc.maxTeams}
         returnPath={returnPath}
+        hasWeekdayPlay={tc.tournament.hasWeekdayPlay}
         pending={pending as Parameters<typeof RegistrationManager>[0]["pending"]}
         approved={approved as Parameters<typeof RegistrationManager>[0]["approved"]}
         waitlist={waitlist as Parameters<typeof RegistrationManager>[0]["waitlist"]}
@@ -168,9 +164,9 @@ export default async function CategoryPage({
       {/* Back link */}
       <Link
         href={`/dashboard/torneos/${tournamentId}`}
-        className="inline-flex items-center gap-1.5 text-sm text-slate-500 hover:text-slate-800 transition-colors"
+        style={{ display: "inline-flex", alignItems: "center", gap: 6, fontSize: 13, color: "#475569", textDecoration: "none" }}
       >
-        <ChevronLeft className="h-4 w-4" />
+        <ChevronLeft size={16} />
         Volver al torneo
       </Link>
     </div>
@@ -178,16 +174,16 @@ export default async function CategoryPage({
 }
 
 function MetricCell({
-  icon, label, value,
+  icon, label, value, idx,
 }: {
-  icon: React.ReactNode; label: string; value: string;
+  icon: React.ReactNode; label: string; value: string; idx: number;
 }) {
   return (
-    <div className="flex items-center gap-3 px-5 py-4">
-      {icon}
+    <div style={{ display: "flex", alignItems: "center", gap: 12, padding: "16px 18px", borderRight: idx < 3 ? "1px solid rgba(255,255,255,0.06)" : "none" }}>
+      <div style={{ opacity: 0.85 }}>{icon}</div>
       <div>
-        <p className="text-[11px] text-slate-400 uppercase tracking-wide font-semibold">{label}</p>
-        <p className="text-sm font-bold text-slate-900 mt-0.5">{value}</p>
+        <p style={{ fontSize: 10, color: "#475569", textTransform: "uppercase", letterSpacing: "0.06em", fontWeight: 800 }}>{label}</p>
+        <p style={{ fontSize: 14, fontWeight: 800, color: "#f1f5f9", marginTop: 2, fontFamily: "var(--font-space), sans-serif" }}>{value}</p>
       </div>
     </div>
   );
@@ -218,15 +214,17 @@ async function CategoryStatusActions({
       <button
         type="submit"
         style={{
-          padding: "7px 14px",
-          borderRadius: 8,
-          border: `1px solid ${transition.color}44`,
-          background: "transparent",
-          color: transition.color,
+          padding: "9px 16px",
+          borderRadius: 10,
+          border: "none",
+          background: transition.color,
+          color: "#080e1a",
           fontSize: 12,
-          fontWeight: 600,
+          fontWeight: 800,
           cursor: "pointer",
           whiteSpace: "nowrap",
+          fontFamily: "inherit",
+          boxShadow: `0 0 18px ${transition.color}40`,
         }}
       >
         {transition.label}

@@ -20,16 +20,16 @@ const A = "#a3e635";
 
 const inp: React.CSSProperties = {
   width: "100%", boxSizing: "border-box",
-  background: "oklch(20% 0.012 250)",
-  border: "1px solid oklch(30% 0.01 250)",
+  background: "rgba(255,255,255,0.04)",
+  border: "1px solid rgba(255,255,255,0.1)",
   borderRadius: 8, padding: "9px 12px",
-  fontSize: 13, color: "var(--text-secondary)",
+  fontSize: 13, color: "#e2e8f0",
   outline: "none", fontFamily: "inherit",
 };
 
 const lbl: React.CSSProperties = {
   display: "block", fontSize: 11, fontWeight: 700,
-  color: "var(--text-faint)", marginBottom: 6,
+  color: "#64748b", marginBottom: 6,
   textTransform: "uppercase", letterSpacing: "0.06em",
 };
 
@@ -96,14 +96,14 @@ function VenueForm({
         <button
           type="button"
           onClick={onDone}
-          style={{ padding: "8px 16px", borderRadius: 8, border: "1px solid oklch(28% 0.01 250)", background: "transparent", color: "var(--text-faint)", fontFamily: "inherit", fontSize: 12, fontWeight: 600, cursor: "pointer" }}
+          style={{ padding: "8px 16px", borderRadius: 8, border: "1px solid rgba(255,255,255,0.08)", background: "transparent", color: "#64748b", fontFamily: "inherit", fontSize: 12, fontWeight: 600, cursor: "pointer" }}
         >
           Cancelar
         </button>
         <button
           type="submit"
           disabled={isPending}
-          style={{ padding: "8px 18px", borderRadius: 8, background: isPending ? "oklch(24% 0.01 250)" : "var(--accent)", border: "none", color: isPending ? "var(--text-faint)" : "#0f172a", fontFamily: "inherit", fontSize: 12, fontWeight: 700, cursor: isPending ? "not-allowed" : "pointer" }}
+          style={{ padding: "8px 18px", borderRadius: 8, background: isPending ? "rgba(255,255,255,0.06)" : "#a3e635", border: "none", color: isPending ? "#64748b" : "#080e1a", fontFamily: "inherit", fontSize: 12, fontWeight: 700, cursor: isPending ? "not-allowed" : "pointer" }}
         >
           {isPending ? "Guardando..." : mode === "edit" ? "Guardar sede" : "Crear sede"}
         </button>
@@ -171,14 +171,14 @@ function CourtForm({
         <button
           type="button"
           onClick={onDone}
-          style={{ padding: "6px 12px", borderRadius: 7, border: "1px solid oklch(28% 0.01 250)", background: "transparent", color: "var(--text-faint)", fontFamily: "inherit", fontSize: 11, fontWeight: 600, cursor: "pointer" }}
+          style={{ padding: "6px 12px", borderRadius: 7, border: "1px solid rgba(255,255,255,0.08)", background: "transparent", color: "#64748b", fontFamily: "inherit", fontSize: 11, fontWeight: 600, cursor: "pointer" }}
         >
           Cancelar
         </button>
         <button
           type="submit"
           disabled={isPending}
-          style={{ padding: "6px 14px", borderRadius: 7, background: isPending ? "oklch(24% 0.01 250)" : "var(--accent)", border: "none", color: isPending ? "var(--text-faint)" : "#0f172a", fontFamily: "inherit", fontSize: 11, fontWeight: 700, cursor: isPending ? "not-allowed" : "pointer" }}
+          style={{ padding: "6px 14px", borderRadius: 7, background: isPending ? "rgba(255,255,255,0.06)" : "#a3e635", border: "none", color: isPending ? "#64748b" : "#080e1a", fontFamily: "inherit", fontSize: 11, fontWeight: 700, cursor: isPending ? "not-allowed" : "pointer" }}
         >
           {isPending ? "Guardando..." : court ? "Guardar" : "Agregar cancha"}
         </button>
@@ -195,23 +195,23 @@ function CourtRow({ court, venueId }: { court: Court; venueId: string }) {
 
   if (editing) {
     return (
-      <div style={{ padding: "10px 12px", borderRadius: 8, background: "oklch(20% 0.012 250)", border: "1px solid rgba(163,230,53,.2)" }}>
+      <div style={{ padding: "10px 12px", borderRadius: 8, background: "rgba(255,255,255,0.04)", border: "1px solid rgba(163,230,53,.2)" }}>
         <CourtForm venueId={venueId} court={court} onDone={() => setEditing(false)} />
       </div>
     );
   }
 
   return (
-    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "8px 12px", borderRadius: 8, background: "oklch(20% 0.012 250)", border: "1px solid oklch(26% 0.01 250)" }}>
+    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "8px 12px", borderRadius: 8, background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.07)" }}>
       <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
         <span style={{ fontSize: 14 }}>{court.isIndoor ? "🏢" : "🌤️"}</span>
         <div>
-          <p style={{ fontSize: 12, fontWeight: 600, color: "var(--text-secondary)" }}>{court.name}</p>
+          <p style={{ fontSize: 12, fontWeight: 600, color: "#e2e8f0" }}>{court.name}</p>
           {court.surface && (
-            <p style={{ fontSize: 10, color: "var(--text-darkest)" }}>{court.surface} · {court.isIndoor ? "Interior" : "Exterior"}</p>
+            <p style={{ fontSize: 10, color: "#334155" }}>{court.surface} · {court.isIndoor ? "Interior" : "Exterior"}</p>
           )}
           {!court.surface && (
-            <p style={{ fontSize: 10, color: "var(--text-darkest)" }}>{court.isIndoor ? "Interior" : "Exterior"}</p>
+            <p style={{ fontSize: 10, color: "#334155" }}>{court.isIndoor ? "Interior" : "Exterior"}</p>
           )}
         </div>
       </div>
@@ -219,7 +219,7 @@ function CourtRow({ court, venueId }: { court: Court; venueId: string }) {
         <button
           type="button"
           onClick={() => setEditing(true)}
-          style={{ padding: "4px 9px", borderRadius: 6, border: "1px solid oklch(28% 0.01 250)", background: "transparent", color: "var(--text-faint)", fontSize: 11, cursor: "pointer", fontFamily: "inherit" }}
+          style={{ padding: "4px 9px", borderRadius: 6, border: "1px solid rgba(255,255,255,0.08)", background: "transparent", color: "#64748b", fontSize: 11, cursor: "pointer", fontFamily: "inherit" }}
         >
           Editar
         </button>
@@ -236,6 +236,32 @@ function CourtRow({ court, venueId }: { court: Court; venueId: string }) {
   );
 }
 
+// ─── Pager ────────────────────────────────────────────────────────────────────
+
+const PAGE_SIZE = 4;
+
+function Pager({ page, total, onPrev, onNext }: {
+  page: number; total: number; onPrev: () => void; onNext: () => void;
+}) {
+  const btn: React.CSSProperties = {
+    padding: "5px 12px", borderRadius: 6, border: "1px solid rgba(255,255,255,0.08)",
+    background: "transparent", fontSize: 11, fontWeight: 600, fontFamily: "inherit", lineHeight: 1,
+  };
+  return (
+    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", paddingTop: 4 }}>
+      <button type="button" onClick={onPrev} disabled={page === 1}
+        style={{ ...btn, cursor: page === 1 ? "not-allowed" : "pointer", color: page === 1 ? "rgba(255,255,255,0.14)" : "#64748b" }}>
+        ← Anterior
+      </button>
+      <span style={{ fontSize: 11, color: "#334155" }}>{page} / {total}</span>
+      <button type="button" onClick={onNext} disabled={page === total}
+        style={{ ...btn, cursor: page === total ? "not-allowed" : "pointer", color: page === total ? "rgba(255,255,255,0.14)" : "#64748b" }}>
+        Siguiente →
+      </button>
+    </div>
+  );
+}
+
 // ─── Venue card ───────────────────────────────────────────────────────────────
 
 function VenueCard({ venue }: { venue: Venue }) {
@@ -243,9 +269,14 @@ function VenueCard({ venue }: { venue: Venue }) {
   const [editing, setEditing]       = useState(false);
   const [showAddCourt, setShowAddCourt] = useState(false);
   const [isPending, startTransition] = useTransition();
+  const [courtPage, setCourtPage]   = useState(1);
+
+  const courtTotalPages = Math.max(1, Math.ceil(venue.courts.length / PAGE_SIZE));
+  const safeCourtPage   = Math.min(courtPage, courtTotalPages);
+  const visibleCourts   = venue.courts.slice((safeCourtPage - 1) * PAGE_SIZE, safeCourtPage * PAGE_SIZE);
 
   return (
-    <div style={{ borderRadius: 12, border: "1px solid oklch(26% 0.01 250)", background: "oklch(18% 0.012 250)", overflow: "hidden" }}>
+    <div style={{ borderRadius: 12, border: "1px solid rgba(255,255,255,0.07)", background: "rgba(255,255,255,0.03)", overflow: "hidden" }}>
       {/* Venue header */}
       <div style={{ padding: "14px 16px", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
         <button
@@ -255,13 +286,13 @@ function VenueCard({ venue }: { venue: Venue }) {
         >
           <span style={{ fontSize: 16, flexShrink: 0 }}>🏟️</span>
           <div>
-            <p style={{ fontSize: 14, fontWeight: 700, color: "var(--text-secondary)", marginBottom: 1 }}>{venue.name}</p>
-            <p style={{ fontSize: 11, color: "var(--text-darkest)" }}>
+            <p style={{ fontSize: 14, fontWeight: 700, color: "#e2e8f0", marginBottom: 1 }}>{venue.name}</p>
+            <p style={{ fontSize: 11, color: "#334155" }}>
               {[venue.city, venue.address].filter(Boolean).join(" · ") || "Sin dirección"}
-              <span style={{ marginLeft: 8, color: "var(--text-darkest)" }}>· {venue.courts.length} cancha{venue.courts.length !== 1 ? "s" : ""}</span>
+              <span style={{ marginLeft: 8, color: "#334155" }}>· {venue.courts.length} cancha{venue.courts.length !== 1 ? "s" : ""}</span>
             </p>
           </div>
-          <span style={{ marginLeft: "auto", fontSize: 11, color: "var(--text-darkest)", paddingRight: 4 }}>
+          <span style={{ marginLeft: "auto", fontSize: 11, color: "#334155", paddingRight: 4 }}>
             {expanded ? "▲" : "▼"}
           </span>
         </button>
@@ -270,7 +301,7 @@ function VenueCard({ venue }: { venue: Venue }) {
           <button
             type="button"
             onClick={() => { setEditing((v) => !v); setExpanded(true); }}
-            style={{ padding: "5px 10px", borderRadius: 7, border: "1px solid oklch(28% 0.01 250)", background: "transparent", color: "var(--text-faint)", fontSize: 11, cursor: "pointer", fontFamily: "inherit" }}
+            style={{ padding: "5px 10px", borderRadius: 7, border: "1px solid rgba(255,255,255,0.08)", background: "transparent", color: "#64748b", fontSize: 11, cursor: "pointer", fontFamily: "inherit" }}
           >
             Editar
           </button>
@@ -291,17 +322,17 @@ function VenueCard({ venue }: { venue: Venue }) {
 
       {/* Edit venue form */}
       {editing && (
-        <div style={{ padding: "0 16px 16px", borderTop: "1px solid oklch(22% 0.01 250)" }}>
-          <p style={{ fontSize: 11, fontWeight: 700, color: "var(--text-faint)", textTransform: "uppercase", letterSpacing: "0.06em", margin: "12px 0 10px" }}>Editar sede</p>
+        <div style={{ padding: "0 16px 16px", borderTop: "1px solid rgba(255,255,255,0.05)" }}>
+          <p style={{ fontSize: 11, fontWeight: 700, color: "#64748b", textTransform: "uppercase", letterSpacing: "0.06em", margin: "12px 0 10px" }}>Editar sede</p>
           <VenueForm mode="edit" venue={venue} onDone={() => setEditing(false)} />
         </div>
       )}
 
       {/* Courts section */}
       {expanded && !editing && (
-        <div style={{ borderTop: "1px solid oklch(22% 0.01 250)", padding: "12px 16px", display: "flex", flexDirection: "column", gap: 8 }}>
+        <div style={{ borderTop: "1px solid rgba(255,255,255,0.05)", padding: "12px 16px", display: "flex", flexDirection: "column", gap: 8 }}>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 4 }}>
-            <span style={{ fontSize: 11, fontWeight: 700, color: "var(--text-faint)", textTransform: "uppercase", letterSpacing: "0.06em" }}>
+            <span style={{ fontSize: 11, fontWeight: 700, color: "#64748b", textTransform: "uppercase", letterSpacing: "0.06em" }}>
               Canchas
             </span>
             <button
@@ -314,20 +345,29 @@ function VenueCard({ venue }: { venue: Venue }) {
           </div>
 
           {showAddCourt && (
-            <div style={{ padding: "10px 12px", borderRadius: 8, background: "oklch(16% 0.012 250)", border: "1px solid rgba(163,230,53,.2)" }}>
+            <div style={{ padding: "10px 12px", borderRadius: 8, background: "rgba(12,20,40,0.7)", border: "1px solid rgba(163,230,53,.2)" }}>
               <CourtForm venueId={venue.id} onDone={() => setShowAddCourt(false)} />
             </div>
           )}
 
           {venue.courts.length === 0 && !showAddCourt && (
-            <div style={{ padding: "20px 0", textAlign: "center", border: "1px dashed oklch(24% 0.01 250)", borderRadius: 8 }}>
-              <p style={{ fontSize: 12, color: "var(--text-darkest)" }}>Sin canchas registradas</p>
+            <div style={{ padding: "20px 0", textAlign: "center", border: "1px dashed rgba(255,255,255,0.06)", borderRadius: 8 }}>
+              <p style={{ fontSize: 12, color: "#334155" }}>Sin canchas registradas</p>
             </div>
           )}
 
-          {venue.courts.map((court) => (
+          {visibleCourts.map((court) => (
             <CourtRow key={court.id} court={court} venueId={venue.id} />
           ))}
+
+          {courtTotalPages > 1 && (
+            <Pager
+              page={safeCourtPage}
+              total={courtTotalPages}
+              onPrev={() => setCourtPage((p) => Math.max(1, p - 1))}
+              onNext={() => setCourtPage((p) => Math.min(courtTotalPages, p + 1))}
+            />
+          )}
         </div>
       )}
     </div>
@@ -338,11 +378,16 @@ function VenueCard({ venue }: { venue: Venue }) {
 
 export function SedesManager({ venues }: { venues: Venue[] }) {
   const [showCreate, setShowCreate] = useState(false);
+  const [venuePage, setVenuePage]   = useState(1);
+
+  const totalPages    = Math.max(1, Math.ceil(venues.length / PAGE_SIZE));
+  const safePage      = Math.min(venuePage, totalPages);
+  const visibleVenues = venues.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-        <span style={{ fontSize: 12, color: "var(--text-faint)" }}>
+        <span style={{ fontSize: 12, color: "#64748b" }}>
           {venues.length} sede{venues.length !== 1 ? "s" : ""} registrada{venues.length !== 1 ? "s" : ""}
         </span>
         <button
@@ -362,18 +407,27 @@ export function SedesManager({ venues }: { venues: Venue[] }) {
       )}
 
       {venues.length === 0 && !showCreate && (
-        <div style={{ padding: "40px 0", textAlign: "center", border: "1px dashed oklch(26% 0.01 250)", borderRadius: 12 }}>
+        <div style={{ padding: "40px 0", textAlign: "center", border: "1px dashed rgba(255,255,255,0.07)", borderRadius: 12 }}>
           <p style={{ fontSize: 24, marginBottom: 10 }}>🏟️</p>
-          <p style={{ fontSize: 13, color: "var(--text-faint)" }}>Sin sedes registradas</p>
-          <p style={{ fontSize: 11, color: "var(--text-darkest)", marginTop: 4 }}>Agregá una sede para asignarle canchas y programar partidos</p>
+          <p style={{ fontSize: 13, color: "#64748b" }}>Sin sedes registradas</p>
+          <p style={{ fontSize: 11, color: "#334155", marginTop: 4 }}>Agregá una sede para asignarle canchas y programar partidos</p>
         </div>
       )}
 
       <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-        {venues.map((venue) => (
+        {visibleVenues.map((venue) => (
           <VenueCard key={venue.id} venue={venue} />
         ))}
       </div>
+
+      {totalPages > 1 && (
+        <Pager
+          page={safePage}
+          total={totalPages}
+          onPrev={() => setVenuePage((p) => Math.max(1, p - 1))}
+          onNext={() => setVenuePage((p) => Math.min(totalPages, p + 1))}
+        />
+      )}
     </div>
   );
 }

@@ -1,5 +1,7 @@
 @import "tailwindcss";
-@import url("https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;1,9..40,300&display=swap");
+
+/* Las fuentes se cargan self-hosted vía next/font en el root layout,
+   que define --font-space (Space Grotesk) y --font-dm-sans (DM Sans). */
 
 /* ─── Design tokens ─────────────────────────────────────────────────────────── */
 :root {
@@ -35,12 +37,12 @@
   body {
     background: #f1f5f9;
     color: #1e293b;
-    font-family: "DM Sans", sans-serif;
+    font-family: var(--font-dm-sans), sans-serif;
     -webkit-font-smoothing: antialiased;
   }
 
   h1, h2, h3, h4, h5, h6 {
-    font-family: "Space Grotesk", sans-serif;
+    font-family: var(--font-space), sans-serif;
     font-weight: 700;
     color: #0f172a;
     line-height: 1.2;
@@ -68,9 +70,528 @@
   to   { opacity: 1; transform: translateX(0); }
 }
 
+/* ═══════════════════════════════════════════════════════════════════════════════
+   PORTAL PUBLIC — Design System v2
+   Dark futuristic with real depth, gradient accents, and structural card redesign
+   ═══════════════════════════════════════════════════════════════════════════════ */
+
+/* ── Keyframes ─────────────────────────────────────────────────────────────── */
+@keyframes card-in {
+  from { opacity: 0; transform: translateY(16px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes shimmer {
+  from { background-position: -200% center; }
+  to   { background-position: 200% center; }
+}
+@keyframes live-ring {
+  0%   { box-shadow: 0 0 0 0 rgba(163,230,53,0.5); }
+  70%  { box-shadow: 0 0 0 6px rgba(163,230,53,0); }
+  100% { box-shadow: 0 0 0 0 rgba(163,230,53,0); }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════════
+   VIBRANT SPORTS — ESPN / livescore look
+   ═══════════════════════════════════════════════════════════════════════════════ */
+
+/* Live pulsing dot used across sports cards */
+@keyframes vib-live {
+  0%, 100% { opacity: 1;   transform: scale(1);   }
+  50%       { opacity: 0.45; transform: scale(0.8); }
+}
+@keyframes vib-live-ring {
+  0%   { box-shadow: 0 0 0 0 rgba(244,63,94,0.55); }
+  70%  { box-shadow: 0 0 0 7px rgba(244,63,94,0);  }
+  100% { box-shadow: 0 0 0 0 rgba(244,63,94,0);    }
+}
+/* Sheen sweeping across live match cards */
+@keyframes vib-sheen {
+  0%   { transform: translateX(-120%) skewX(-18deg); }
+  100% { transform: translateX(320%)  skewX(-18deg); }
+}
+/* Score number pop */
+@keyframes vib-pop {
+  0%   { transform: scale(0.6); opacity: 0; }
+  60%  { transform: scale(1.12); }
+  100% { transform: scale(1);   opacity: 1; }
+}
+
+/* Vibrant card hover — lift + colored glow set via --vib-glow */
+.vib-card {
+  position: relative;
+  transition: transform 200ms cubic-bezier(0.23,1,0.32,1), box-shadow 200ms ease-out;
+}
+.vib-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 18px 48px rgba(0,0,0,0.5), 0 0 28px var(--vib-glow, rgba(163,230,53,0.18));
+}
+.vib-card:active { transform: translateY(-1px) scale(0.99); transition-duration: 80ms; }
+
+/* Live card glow border pulse */
+.vib-live-card {
+  animation: vib-live-ring 1.8s ease-out infinite;
+}
+
+/* Live LIVE pill dot */
+.vib-dot {
+  animation: vib-live 1.2s ease-in-out infinite;
+}
+
+/* Sheen overlay element (place inside a relative, overflow:hidden parent) */
+.vib-sheen {
+  position: absolute;
+  top: 0; left: 0; height: 100%; width: 40%;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.08), transparent);
+  animation: vib-sheen 3.2s ease-in-out infinite;
+  pointer-events: none;
+}
+
+/* Big sports score number */
+.vib-score {
+  font-family: var(--font-space), sans-serif;
+  font-weight: 900;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Staggered entrance for grids */
+.vib-in { animation: card-in 0.5s cubic-bezier(0.23,1,0.32,1) backwards; }
+
+/* ── Dashboard shell ──────────────────────────────────────────────────────── */
+.dash-bg {
+  background:
+    radial-gradient(ellipse 70% 40% at 100% 0%, rgba(163,230,53,0.05) 0%, transparent 55%),
+    radial-gradient(ellipse 50% 40% at 0% 100%, rgba(56,189,248,0.04) 0%, transparent 55%),
+    #070d1a;
+}
+.dash-sidebar {
+  background: rgba(8,14,30,0.92);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-right: 1px solid rgba(255,255,255,0.06);
+}
+.dash-header {
+  background: rgba(7,13,26,0.8);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border-bottom: 1px solid rgba(255,255,255,0.06);
+}
+.dash-search::placeholder { color: #475569; }
+.dash-search:focus { border-color: rgba(163,230,53,0.35) !important; }
+
+/* ── Responsive dashboard shell ─────────────────────────────────────────────
+   Desktop: sidebar sticky en el flujo. <1024px: drawer off-canvas con overlay,
+   controlado por use-mobile-nav (hamburguesa en el header). */
+.dash-aside {
+  flex-shrink: 0;
+  height: 100vh;
+  position: sticky;
+  top: 0;
+  display: flex;
+  flex-direction: column;
+}
+.dash-overlay { display: none; }
+.dash-menu-btn { display: none; }
+.dash-header { padding: 0 32px; }
+.dash-main { flex: 1; overflow-y: auto; padding: 28px 32px; }
+/* Barra superior solo-móvil para layouts sin header (panel admin) */
+.dash-mobile-topbar { display: none; }
+/* Búsqueda dentro del drawer — solo en móvil, donde el header oculta la suya */
+.dash-drawer-search { display: none; }
+
+@media (max-width: 1023px) {
+  .dash-aside {
+    position: fixed;
+    left: 0; top: 0; bottom: 0;
+    height: 100dvh;
+    z-index: 120;
+    transform: translateX(-100%);
+    transition: transform 320ms cubic-bezier(0.32, 0.72, 0, 1);
+  }
+  .dash-aside.open {
+    transform: translateX(0);
+    box-shadow: 24px 0 64px rgba(0,0,0,0.5);
+  }
+  .dash-overlay {
+    display: block;
+    position: fixed; inset: 0;
+    z-index: 110;
+    background: rgba(2,6,16,0.6);
+    -webkit-backdrop-filter: blur(2px);
+    backdrop-filter: blur(2px);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 240ms ease;
+  }
+  .dash-overlay.open { opacity: 1; pointer-events: auto; }
+  .dash-menu-btn { display: flex; }
+  .dash-header { padding: 0 16px; }
+  .dash-main { padding: 20px 16px; }
+  .dash-mobile-topbar {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    height: 56px;
+    padding: 0 16px;
+    flex-shrink: 0;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    background: rgba(7,13,26,0.8);
+    -webkit-backdrop-filter: blur(16px);
+    backdrop-filter: blur(16px);
+    border-bottom: 1px solid rgba(255,255,255,0.06);
+  }
+}
+@media (max-width: 767px) {
+  .dash-search-wrap { display: none; }
+  .dash-drawer-search { display: block; }
+  /* iOS hace zoom al enfocar inputs <16px; evitarlo en la búsqueda del drawer */
+  .dash-drawer-search .dash-search { font-size: 16px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .dash-aside { transition: none; }
+  .dash-overlay { transition: opacity 120ms ease; }
+}
+
+/* ── Skeleton (loading states) ─────────────────────────────────────────── */
+@keyframes skeleton-pulse {
+  0%, 100% { opacity: 1; }
+  50%      { opacity: 0.5; }
+}
+.skeleton {
+  border-radius: 8px;
+  background: rgba(255,255,255,0.055);
+  animation: skeleton-pulse 1.6s ease-in-out infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .skeleton { animation: none; }
+}
+
+/* Dashboard hover row (for server components — no JS handlers) */
+.dash-row {
+  background: rgba(255,255,255,0.03);
+  border: 1px solid rgba(255,255,255,0.06);
+  transition: background 0.14s, border-color 0.14s;
+}
+.dash-row:hover {
+  background: rgba(163,230,53,0.06);
+  border-color: rgba(163,230,53,0.2);
+}
+
+/* Nav item */
+.dnav {
+  display: flex; align-items: center; gap: 11px;
+  width: 100%; padding: 9px 12px; border-radius: 10px; margin-bottom: 3px;
+  color: #64748b; font-size: 13px; font-weight: 600;
+  text-decoration: none; position: relative;
+  border: 1px solid transparent;
+  transition: background 0.14s, color 0.14s, border-color 0.14s;
+}
+.dnav:hover { background: rgba(255,255,255,0.04); color: #cbd5e1; }
+.dnav.active {
+  background: rgba(163,230,53,0.12);
+  border-color: rgba(163,230,53,0.22);
+  color: #a3e635;
+  box-shadow: 0 0 18px rgba(163,230,53,0.08);
+}
+.dnav.active::before {
+  content: '';
+  position: absolute; left: -1px; top: 50%; transform: translateY(-50%);
+  width: 3px; height: 18px; border-radius: 3px;
+  background: #a3e635; box-shadow: 0 0 8px #a3e635;
+}
+.dnav.danger:hover { background: rgba(244,63,94,0.1); color: #fb7185; }
+.dnav.danger.active {
+  background: rgba(244,63,94,0.12); border-color: rgba(244,63,94,0.25); color: #fb7185;
+}
+.dnav.danger.active::before { background: #fb7185; box-shadow: 0 0 8px #fb7185; }
+
+/* Dashboard stat card */
+.dstat {
+  position: relative; overflow: hidden;
+  border-radius: 16px;
+  background: rgba(12,20,40,0.7);
+  border: 1px solid rgba(255,255,255,0.07);
+  transition: transform 0.18s cubic-bezier(0.23,1,0.32,1), box-shadow 0.18s, border-color 0.18s;
+}
+.dstat:hover {
+  transform: translateY(-3px);
+  border-color: rgba(255,255,255,0.14);
+  box-shadow: 0 16px 40px rgba(0,0,0,0.45), 0 0 24px var(--vib-glow, rgba(163,230,53,0.15));
+}
+
+/* ── Landing page ─────────────────────────────────────────────────────────── */
+/* Hero text entrance with blur */
+@keyframes hero-entry {
+  from { opacity: 0; transform: translateY(22px); filter: blur(5px); }
+  to   { opacity: 1; transform: translateY(0);    filter: blur(0);   }
+}
+.hero-badge { animation: hero-entry 0.7s cubic-bezier(0.23,1,0.32,1) 0.05s both; }
+.hero-h1    { animation: hero-entry 1s   cubic-bezier(0.23,1,0.32,1) 0.18s both; }
+.hero-sub   { animation: hero-entry 0.7s cubic-bezier(0.23,1,0.32,1) 0.38s both; }
+.hero-ctas  { animation: hero-entry 0.7s cubic-bezier(0.23,1,0.32,1) 0.54s both; }
+.hero-links { animation: hero-entry 0.6s cubic-bezier(0.23,1,0.32,1) 0.70s both; }
+.hero-court { animation: hero-entry 1.1s cubic-bezier(0.23,1,0.32,1) 0.25s both; }
+
+/* Floating particles */
+@keyframes p-float {
+  0%   { opacity: 0; transform: translateY(0) scale(0.4); }
+  12%  { opacity: 1; }
+  80%  { opacity: 0.4; }
+  100% { opacity: 0; transform: translateY(-170px) scale(1.3); }
+}
+
+/* Drifting ambient glow blob */
+@keyframes glow-drift {
+  0%, 100% { transform: translate(0, 0)     scale(1); }
+  33%      { transform: translate(-55px, 35px) scale(1.18); }
+  66%      { transform: translate(45px, -28px) scale(0.88); }
+}
+
+/* Horizontal marquee */
+@keyframes marquee {
+  from { transform: translateX(0); }
+  to   { transform: translateX(-50%); }
+}
+
+/* Feature icon bob */
+@keyframes icon-bob {
+  0%, 100% { transform: translateY(0)   rotate(0deg); }
+  50%      { transform: translateY(-7px) rotate(4deg); }
+}
+.icon-bob { animation: icon-bob 3.5s ease-in-out infinite; }
+
+/* Court SVG glow pulse */
+@keyframes court-glow {
+  0%, 100% { filter: drop-shadow(0 0 8px rgba(163,230,53,0.18)); }
+  50%      { filter: drop-shadow(0 0 28px rgba(163,230,53,0.5)); }
+}
+.court-svg { animation: court-glow 4s ease-in-out infinite; }
+
+/* Ping ring for live indicators */
+@keyframes ping {
+  0%   { transform: scale(1);   opacity: 0.7; }
+  100% { transform: scale(2.8); opacity: 0;   }
+}
+
+/* CTA section border pulse */
+@keyframes cta-border-pulse {
+  0%, 100% { border-color: rgba(163,230,53,0.14); }
+  50%      { border-color: rgba(163,230,53,0.35); box-shadow: 0 0 48px rgba(163,230,53,0.1); }
+}
+.cta-pulse { animation: cta-border-pulse 4s ease-in-out infinite; }
+
+/* Shimmer on primary button */
+@keyframes btn-shimmer {
+  0%, 100% { background-position: 0% center; }
+  50%       { background-position: 100% center; }
+}
+.btn-lime {
+  background: #a3e635;
+  background-image: linear-gradient(90deg, #a3e635 0%, #cbf27a 40%, #e8ff90 50%, #cbf27a 60%, #a3e635 100%);
+  background-size: 250% 100%;
+  background-position: 0% center;
+  animation: btn-shimmer 3s ease-in-out infinite;
+}
+
+/* Scroll reveal */
+.sr {
+  opacity: 0;
+  transform: translateY(28px);
+  transition: opacity 0.65s cubic-bezier(0.23,1,0.32,1),
+              transform 0.65s cubic-bezier(0.23,1,0.32,1);
+}
+.sr.visible { opacity: 1; transform: translateY(0); }
+.sr-d1 { transition-delay: 80ms;  }
+.sr-d2 { transition-delay: 160ms; }
+.sr-d3 { transition-delay: 240ms; }
+.sr-d4 { transition-delay: 320ms; }
+.sr-d5 { transition-delay: 400ms; }
+
+/* Feature card hover micro-interactions */
+.fc-icon  { transition: transform 220ms cubic-bezier(0.23,1,0.32,1), box-shadow 220ms; }
+.t-card:hover .fc-icon { transform: scale(1.14) rotate(-6deg); }
+.fc-arrow { display: inline-block; transition: transform 200ms cubic-bezier(0.23,1,0.32,1); }
+.t-card:hover .fc-arrow { transform: translateX(7px); }
+
+/* Reduced motion — kill all animations */
+@media (prefers-reduced-motion: reduce) {
+  .hero-badge, .hero-h1, .hero-sub, .hero-ctas, .hero-links, .hero-court,
+  .icon-bob, .court-svg, .cta-pulse, .btn-lime, .sr {
+    animation: none !important;
+    transition: none !important;
+    opacity: 1 !important;
+    transform: none !important;
+    filter: none !important;
+  }
+}
+
+/* ── Page background ────────────────────────────────────────────────────────── */
+.portal-bg {
+  min-height: 100vh;
+  color: #f1f5f9;
+  font-family: var(--font-dm-sans), sans-serif;
+  position: relative;
+  /* Deep space dark with dual ambient glow */
+  background:
+    radial-gradient(ellipse 80% 50% at 10% -10%, rgba(163,230,53,0.08) 0%, transparent 60%),
+    radial-gradient(ellipse 60% 40% at 90% 110%, rgba(56,189,248,0.05) 0%, transparent 60%),
+    #050c18;
+}
+/* Subtle dot-grid overlay — the "tech" texture */
+.portal-bg::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background-image: radial-gradient(rgba(255,255,255,0.08) 1px, transparent 1px);
+  background-size: 32px 32px;
+  pointer-events: none;
+  z-index: 0;
+  opacity: 0.4;
+}
+.portal-bg > * { position: relative; z-index: 1; }
+
+/* ── Glass surfaces ─────────────────────────────────────────────────────────── */
+.glass {
+  background: rgba(10,18,40,0.75);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border: 1px solid rgba(255,255,255,0.07);
+  box-shadow: 0 4px 32px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.05);
+}
+.glass-inner {
+  background: rgba(255,255,255,0.025);
+  border: 1px solid rgba(255,255,255,0.05);
+}
+
+/* ── Gradient text — for hero headings ─────────────────────────────────────── */
+.grad-text {
+  background: linear-gradient(135deg, #f8fafc 20%, #a3e635 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+.grad-text-gold {
+  background: linear-gradient(135deg, #fef3c7 0%, #fbbf24 60%, #f59e0b 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* ── Tournament card — the core visual unit ─────────────────────────────────── */
+.t-card {
+  background: rgba(8,16,38,0.88);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255,255,255,0.07);
+  border-radius: 18px;
+  overflow: hidden;
+  text-decoration: none;
+  display: block;
+  /* Layered shadow: ambient + contact */
+  box-shadow:
+    0 1px 0 rgba(255,255,255,0.04) inset,
+    0 8px 32px rgba(0,0,0,0.4),
+    0 2px 8px rgba(0,0,0,0.3);
+  transition:
+    transform 200ms cubic-bezier(0.23,1,0.32,1),
+    box-shadow 200ms ease-out,
+    border-color 200ms;
+}
+.t-card:hover {
+  transform: translateY(-4px);
+  border-color: rgba(255,255,255,0.13);
+  box-shadow:
+    0 1px 0 rgba(255,255,255,0.06) inset,
+    0 24px 64px rgba(0,0,0,0.5),
+    0 8px 24px rgba(0,0,0,0.35);
+}
+.t-card:active {
+  transform: translateY(-1px) scale(0.99);
+  transition-duration: 80ms;
+}
+
+/* ── Pill navigation ────────────────────────────────────────────────────────── */
+.nav-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 7px 16px;
+  border-radius: 100px;
+  font-size: 13px;
+  font-weight: 600;
+  text-decoration: none;
+  color: #64748b;
+  border: 1px solid transparent;
+  transition: color 150ms, background 150ms, border-color 150ms, box-shadow 150ms;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.nav-pill:hover { color: #94a3b8; }
+.nav-pill.active {
+  color: #a3e635;
+  background: rgba(163,230,53,0.1);
+  border-color: rgba(163,230,53,0.22);
+  box-shadow: 0 0 20px rgba(163,230,53,0.08);
+}
+
+/* ── Card entrance animation ────────────────────────────────────────────────── */
+.card-animate { animation: card-in 0.5s cubic-bezier(0.23,1,0.32,1) backwards; }
+.card-d0  { animation-delay:   0ms; }
+.card-d1  { animation-delay:  60ms; }
+.card-d2  { animation-delay: 120ms; }
+.card-d3  { animation-delay: 180ms; }
+.card-d4  { animation-delay: 240ms; }
+.card-d5  { animation-delay: 300ms; }
+
+/* ── Podium blocks (ranking page) ───────────────────────────────────────────── */
+.podium-gold {
+  background: linear-gradient(180deg, rgba(251,191,36,0.18) 0%, rgba(251,191,36,0.06) 60%, transparent 100%);
+  border: 1px solid rgba(251,191,36,0.25);
+  box-shadow: 0 0 40px rgba(251,191,36,0.12), 0 8px 32px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.05);
+}
+.podium-silver {
+  background: linear-gradient(180deg, rgba(148,163,184,0.15) 0%, rgba(148,163,184,0.05) 60%, transparent 100%);
+  border: 1px solid rgba(148,163,184,0.2);
+  box-shadow: 0 0 24px rgba(148,163,184,0.08), 0 8px 32px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.04);
+}
+.podium-bronze {
+  background: linear-gradient(180deg, rgba(180,120,60,0.14) 0%, rgba(180,120,60,0.04) 60%, transparent 100%);
+  border: 1px solid rgba(205,124,47,0.2);
+  box-shadow: 0 0 24px rgba(205,124,47,0.08), 0 8px 32px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.04);
+}
+
+/* ── Stat display (large number + label) ────────────────────────────────────── */
+.stat-num {
+  font-family: var(--font-space), sans-serif;
+  font-size: 36px;
+  font-weight: 800;
+  line-height: 1;
+  color: #a3e635;
+}
+
+/* ── Accent glow ring ───────────────────────────────────────────────────────── */
+.accent-ring {
+  border: 1px solid rgba(163,230,53,0.25);
+  box-shadow: 0 0 0 3px rgba(163,230,53,0.06), 0 0 20px rgba(163,230,53,0.12);
+}
+
+/* ── Live pulse (stronger than the dot) ─────────────────────────────────────── */
+.live-pulse {
+  animation: live-ring 1.5s infinite;
+}
+
+/* ── Portal card (generic hover lift, for server components) ─────────────────── */
+.portal-card {
+  transition: transform 180ms cubic-bezier(0.23,1,0.32,1), box-shadow 180ms ease-out;
+}
+.portal-card:hover { transform: translateY(-3px); }
+.portal-card:active { transform: scale(0.98); transition-duration: 80ms; }
+
 /* ─── Utilities ──────────────────────────────────────────────────────────────── */
 @layer utilities {
-  .font-display { font-family: "Space Grotesk", sans-serif; }
+  .font-display { font-family: var(--font-space), sans-serif; }
 
   /* Hide scrollbar */
   .scrollbar-none { scrollbar-width: none; }
@@ -105,7 +626,7 @@
 
   /* Page title */
   .page-title {
-    font-family: "Space Grotesk", sans-serif;
+    font-family: var(--font-space), sans-serif;
     font-size: 22px;
     font-weight: 700;
     color: var(--text-primary);
@@ -134,8 +655,9 @@
     font-size: 12px;
     font-weight: 600;
     cursor: pointer;
-    transition: all 0.12s;
+    transition: border-color 0.12s, background 0.12s, color 0.12s;
   }
+  .filter-pill:active { transform: scale(0.97); }
   .filter-pill:hover { border-color: var(--border-hover); color: var(--text-muted); }
   .filter-pill.active {
     border-color: var(--accent-30);

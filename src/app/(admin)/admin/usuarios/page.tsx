@@ -1,36 +1,50 @@
 import { redirect } from "next/navigation";
 import { auth } from "@/lib/auth";
-import { getAllUsers } from "@/modules/admin/queries";
+import { getUsersPage } from "@/modules/admin/queries";
 import { toggleUserActive, setUserSystemRole } from "@/modules/admin/actions";
 import { Users, ShieldAlert } from "lucide-react";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = { title: "Admin — Usuarios" };
 
-export default async function AdminUsuariosPage() {
+function buildUrl(page: number) {
+  if (page <= 1) return "/admin/usuarios";
+  return `/admin/usuarios?page=${page}`;
+}
+
+export default async function AdminUsuariosPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ page?: string }>;
+}) {
   const session = await auth();
   if (session?.user?.systemRole !== "SUPER_ADMIN") redirect("/dashboard");
 
-  const users = await getAllUsers();
+  const { page: pageStr } = await searchParams;
+  const page = Math.max(1, parseInt(pageStr ?? "1", 10) || 1);
+
+  const { users, total, pageSize } = await getUsersPage({ page });
+  const totalPages = Math.ceil(total / pageSize);
   const currentUserId = session.user.id;
 
   return (
     <div style={{ maxWidth: 1000, display: "flex", flexDirection: "column", gap: 24 }}>
       <div>
-        <h1 style={{ fontSize: 22, fontWeight: 800, color: "var(--text-primary)", fontFamily: "Space Grotesk, sans-serif", margin: 0 }}>
+        <h1 style={{ fontSize: 22, fontWeight: 800, color: "#f8fafc", fontFamily: "var(--font-space), sans-serif", margin: 0 }}>
           Usuarios
         </h1>
-        <p style={{ fontSize: 13, color: "var(--text-dimmer)", marginTop: 4 }}>
-          {users.length} usuario{users.length !== 1 ? "s" : ""} en el sistema
+        <p style={{ fontSize: 13, color: "#475569", marginTop: 4 }}>
+          {total} usuario{total !== 1 ? "s" : ""} en el sistema
+          {totalPages > 1 && ` · Página ${page} de ${totalPages}`}
         </p>
       </div>
 
-      <div style={{ background: "var(--bg-surface)", border: "1px solid var(--border-default)", borderRadius: 12, overflow: "hidden" }}>
+      <div style={{ background: "rgba(12,20,40,0.7)", border: "1px solid rgba(255,255,255,0.07)", borderRadius: 12, overflow: "hidden" }}>
         <table style={{ width: "100%", borderCollapse: "collapse" }}>
           <thead>
-            <tr style={{ borderBottom: "1px solid var(--border-subtle)", background: "var(--bg-elevated)" }}>
+            <tr style={{ borderBottom: "1px solid rgba(255,255,255,0.06)", background: "rgba(255,255,255,0.04)" }}>
               {["Usuario", "Rol sistema", "Organizadores", "Estado", "Creado", "Acciones"].map((h) => (
-                <th key={h} style={{ padding: "10px 16px", textAlign: "left", fontSize: 11, fontWeight: 600, color: "var(--text-darkest)", textTransform: "uppercase", letterSpacing: "0.06em" }}>
+                <th key={h} style={{ padding: "10px 16px", textAlign: "left", fontSize: 11, fontWeight: 600, color: "#334155", textTransform: "uppercase", letterSpacing: "0.06em" }}>
                   {h}
                 </th>
               ))}
@@ -43,27 +57,27 @@ export default async function AdminUsuariosPage() {
               const orgNames = user.organizerMemberships.map((uo) => uo.organizer.name).join(", ");
 
               return (
-                <tr key={user.id} style={{ borderBottom: "1px solid var(--border-subtle)", opacity: user.isActive ? 1 : 0.55 }}>
+                <tr key={user.id} style={{ borderBottom: "1px solid rgba(255,255,255,0.06)", opacity: user.isActive ? 1 : 0.55 }}>
                   {/* Usuario */}
                   <td style={{ padding: "12px 16px" }}>
                     <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
                       <div style={{
                         width: 30, height: 30, borderRadius: 7, flexShrink: 0,
-                        background: isSuperAdmin ? "rgba(239,68,68,0.12)" : "var(--bg-elevated)",
-                        border: `1px solid ${isSuperAdmin ? "rgba(239,68,68,0.25)" : "var(--border-default)"}`,
+                        background: isSuperAdmin ? "rgba(239,68,68,0.12)" : "rgba(255,255,255,0.04)",
+                        border: `1px solid ${isSuperAdmin ? "rgba(239,68,68,0.25)" : "rgba(255,255,255,0.07)"}`,
                         display: "flex", alignItems: "center", justifyContent: "center",
                         fontSize: 10, fontWeight: 800,
-                        color: isSuperAdmin ? "#ef4444" : "var(--text-muted)",
-                        fontFamily: "Space Grotesk, sans-serif",
+                        color: isSuperAdmin ? "#ef4444" : "#94a3b8",
+                        fontFamily: "var(--font-space), sans-serif",
                       }}>
                         {(user.name ?? user.email ?? "?").slice(0, 2).toUpperCase()}
                       </div>
                       <div>
-                        <p style={{ margin: 0, fontSize: 13, fontWeight: 600, color: "var(--text-primary)" }}>
+                        <p style={{ margin: 0, fontSize: 13, fontWeight: 600, color: "#f8fafc" }}>
                           {user.name ?? "(sin nombre)"}
-                          {isSelf && <span style={{ fontSize: 10, color: "var(--accent)", marginLeft: 6, fontWeight: 700 }}>vos</span>}
+                          {isSelf && <span style={{ fontSize: 10, color: "#a3e635", marginLeft: 6, fontWeight: 700 }}>vos</span>}
                         </p>
-                        <p style={{ margin: 0, fontSize: 11, color: "var(--text-dimmer)" }}>{user.email}</p>
+                        <p style={{ margin: 0, fontSize: 11, color: "#475569" }}>{user.email}</p>
                       </div>
                     </div>
                   </td>
@@ -85,7 +99,7 @@ export default async function AdminUsuariosPage() {
 
                   {/* Organizadores */}
                   <td style={{ padding: "12px 16px" }}>
-                    <p style={{ margin: 0, fontSize: 12, color: "var(--text-dimmer)", maxWidth: 180, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                    <p style={{ margin: 0, fontSize: 12, color: "#475569", maxWidth: 180, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                       {orgNames || "—"}
                     </p>
                   </td>
@@ -104,7 +118,7 @@ export default async function AdminUsuariosPage() {
 
                   {/* Creado */}
                   <td style={{ padding: "12px 16px" }}>
-                    <p style={{ margin: 0, fontSize: 12, color: "var(--text-dimmer)" }}>
+                    <p style={{ margin: 0, fontSize: 12, color: "#475569" }}>
                       {new Date(user.createdAt).toLocaleDateString("es-AR", { day: "2-digit", month: "2-digit", year: "2-digit" })}
                     </p>
                   </td>
@@ -112,10 +126,9 @@ export default async function AdminUsuariosPage() {
                   {/* Acciones */}
                   <td style={{ padding: "12px 16px" }}>
                     {isSelf ? (
-                      <span style={{ fontSize: 11, color: "var(--text-darkest)" }}>—</span>
+                      <span style={{ fontSize: 11, color: "#334155" }}>—</span>
                     ) : (
                       <div style={{ display: "flex", gap: 6 }}>
-                        {/* Toggle active */}
                         <form
                           action={async () => {
                             "use server";
@@ -136,7 +149,6 @@ export default async function AdminUsuariosPage() {
                           </button>
                         </form>
 
-                        {/* Toggle role */}
                         <form
                           action={async () => {
                             "use server";
@@ -149,7 +161,7 @@ export default async function AdminUsuariosPage() {
                               padding: "5px 10px", borderRadius: 6,
                               border: "1px solid rgba(239,68,68,0.3)",
                               background: "transparent",
-                              color: isSuperAdmin ? "var(--text-dimmer)" : "#ef4444",
+                              color: isSuperAdmin ? "#475569" : "#ef4444",
                               fontSize: 11, fontWeight: 600, cursor: "pointer", whiteSpace: "nowrap",
                             }}
                           >
@@ -167,11 +179,92 @@ export default async function AdminUsuariosPage() {
 
         {users.length === 0 && (
           <div style={{ display: "flex", flexDirection: "column", alignItems: "center", padding: "60px 0", gap: 12 }}>
-            <Users size={40} color="var(--border-strong)" />
-            <p style={{ fontSize: 13, color: "var(--text-dimmer)", margin: 0 }}>Sin usuarios registrados</p>
+            <Users size={40} color="rgba(255,255,255,0.1)" />
+            <p style={{ fontSize: 13, color: "#475569", margin: 0 }}>Sin usuarios registrados</p>
           </div>
         )}
       </div>
+
+      {/* Pagination */}
+      {totalPages > 1 && (
+        <div style={{ display: "flex", justifyContent: "center", alignItems: "center", gap: 8 }}>
+          {page > 1 ? (
+            <a
+              href={buildUrl(page - 1)}
+              style={{
+                height: 34, paddingInline: 14, display: "flex", alignItems: "center",
+                borderRadius: 8, border: "1px solid rgba(255,255,255,0.07)", background: "rgba(12,20,40,0.7)",
+                fontSize: 12, fontWeight: 600, color: "#e2e8f0",
+                textDecoration: "none",
+              }}
+            >
+              ← Anterior
+            </a>
+          ) : (
+            <span
+              style={{
+                height: 34, paddingInline: 14, display: "flex", alignItems: "center",
+                borderRadius: 8, border: "1px solid rgba(255,255,255,0.06)", background: "rgba(255,255,255,0.04)",
+                fontSize: 12, fontWeight: 600, color: "#334155",
+              }}
+            >
+              ← Anterior
+            </span>
+          )}
+
+          {Array.from({ length: totalPages }, (_, i) => i + 1)
+            .filter((p) => p === 1 || p === totalPages || Math.abs(p - page) <= 1)
+            .reduce<(number | "…")[]>((acc, p, idx, arr) => {
+              if (idx > 0 && (p as number) - (arr[idx - 1] as number) > 1) acc.push("…");
+              acc.push(p);
+              return acc;
+            }, [])
+            .map((p, i) =>
+              p === "…" ? (
+                <span key={`ellipsis-${i}`} style={{ fontSize: 12, color: "#334155", paddingInline: 4 }}>…</span>
+              ) : (
+                <a
+                  key={p}
+                  href={buildUrl(p as number)}
+                  style={{
+                    width: 34, height: 34, display: "flex", alignItems: "center", justifyContent: "center",
+                    borderRadius: 8, border: `1px solid ${p === page ? "rgba(163,230,53,0.28)" : "rgba(255,255,255,0.07)"}`,
+                    background: p === page ? "rgba(163,230,53,0.12)" : "rgba(12,20,40,0.7)",
+                    fontSize: 12, fontWeight: 700,
+                    color: p === page ? "#a3e635" : "#e2e8f0",
+                    textDecoration: "none",
+                  }}
+                >
+                  {p}
+                </a>
+              )
+            )}
+
+          {page < totalPages ? (
+            <a
+              href={buildUrl(page + 1)}
+              style={{
+                height: 34, paddingInline: 14, display: "flex", alignItems: "center",
+                borderRadius: 8, border: "1px solid rgba(255,255,255,0.07)", background: "rgba(12,20,40,0.7)",
+                fontSize: 12, fontWeight: 600, color: "#e2e8f0",
+                textDecoration: "none",
+              }}
+            >
+              Siguiente →
+            </a>
+          ) : (
+            <span
+              style={{
+                height: 34, paddingInline: 14, display: "flex", alignItems: "center",
+                borderRadius: 8, border: "1px solid rgba(255,255,255,0.06)", background: "rgba(255,255,255,0.04)",
+                fontSize: 12, fontWeight: 600, color: "#334155",
+              }}
+            >
+              Siguiente →
+            </span>
+          )}
+        </div>
+      )}
     </div>
   );
 }

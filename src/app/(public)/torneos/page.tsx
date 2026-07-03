@@ -1,49 +1,98 @@
 import Link from "next/link";
-import { getPublicTournaments, getPublicFeaturedTournament } from "@/modules/public/queries";
+import { getPublicSliderTournaments, getPublicTournamentsPage } from "@/modules/public/queries";
+import { scopedOrg, plink, getPortalScope } from "@/lib/portal-scope";
+import { TorneosSlider } from "./_components/torneos-slider";
 import type { Metadata } from "next";
+import type { CSSProperties } from "react";
 
 export const metadata: Metadata = { title: "Torneos — PádelPro" };
 
-const MAX = 1140;
-const G   = "#16a34a";
+const MAX    = 1140;
+const ACCENT = "#a3e635";
 
-const STATUS_LABEL: Record<string, string> = {
-  PUBLISHED:            "Próximamente",
-  REGISTRATION_OPEN:    "Inscripciones",
-  REGISTRATION_CLOSED:  "Inscripciones cerradas",
-  IN_PROGRESS:          "En curso",
-  COMPLETED:            "Finalizado",
+const FILTER_TABS = [
+  { label: "Todos",           value: ""                    },
+  { label: "En curso",        value: "IN_PROGRESS"         },
+  { label: "Inscripciones",   value: "REGISTRATION_OPEN"   },
+  { label: "Cerradas",        value: "REGISTRATION_CLOSED" },
+  { label: "Próximamente",    value: "PUBLISHED"           },
+  { label: "Finalizados",     value: "COMPLETED"           },
+] as const;
+
+const FILTER_LABEL: Record<string, string> = Object.fromEntries(
+  FILTER_TABS.map((f) => [f.value, f.label])
+);
+
+// Status config: text badge + hero gradient + accent for the card header
+const STATUS: Record<string, {
+  label:    string;
+  color:    string;
+  bg:       string;
+  border:   string;
+  hero:     string;   // gradient for card header zone
+  dot?:     boolean;
+}> = {
+  PUBLISHED: {
+    label:  "Próximamente",
+    color:  "#a5b4fc",
+    bg:     "rgba(99,102,241,0.12)",
+    border: "rgba(99,102,241,0.22)",
+    hero:   "linear-gradient(135deg, rgba(99,102,241,0.22) 0%, transparent 65%)",
+  },
+  REGISTRATION_OPEN: {
+    label:  "Inscripciones abiertas",
+    color:  "#38bdf8",
+    bg:     "rgba(56,189,248,0.12)",
+    border: "rgba(56,189,248,0.22)",
+    hero:   "linear-gradient(135deg, rgba(56,189,248,0.2) 0%, transparent 65%)",
+  },
+  REGISTRATION_CLOSED: {
+    label:  "Inscripciones cerradas",
+    color:  "#fb923c",
+    bg:     "rgba(249,115,22,0.12)",
+    border: "rgba(249,115,22,0.22)",
+    hero:   "linear-gradient(135deg, rgba(249,115,22,0.18) 0%, transparent 65%)",
+  },
+  IN_PROGRESS: {
+    label:  "En curso",
+    color:  ACCENT,
+    bg:     "rgba(163,230,53,0.12)",
+    border: "rgba(163,230,53,0.25)",
+    hero:   "linear-gradient(135deg, rgba(163,230,53,0.22) 0%, transparent 65%)",
+    dot:    true,
+  },
+  COMPLETED: {
+    label:  "Finalizado",
+    color:  "#64748b",
+    bg:     "rgba(100,116,139,0.10)",
+    border: "rgba(100,116,139,0.18)",
+    hero:   "linear-gradient(135deg, rgba(100,116,139,0.14) 0%, transparent 65%)",
+  },
+  CANCELLED: {
+    label:  "Cancelado",
+    color:  "#f87171",
+    bg:     "rgba(239,68,68,0.12)",
+    border: "rgba(239,68,68,0.22)",
+    hero:   "linear-gradient(135deg, rgba(239,68,68,0.15) 0%, transparent 65%)",
+  },
 };
 
-const STATUS_STYLE: Record<string, { bg: string; color: string; dot?: boolean }> = {
-  PUBLISHED:            { bg: "#dbeafe", color: "#2563eb" },
-  REGISTRATION_OPEN:    { bg: "#dbeafe", color: "#2563eb" },
-  REGISTRATION_CLOSED:  { bg: "#f1f5f9", color: "#64748b" },
-  IN_PROGRESS:          { bg: "#dcfce7", color: G, dot: true },
-  COMPLETED:            { bg: "#f1f5f9", color: "#94a3b8" },
-};
-
-const CAT_STATUS: Record<string, { bg: string; color: string }> = {
-  DRAFT:              { bg: "#f1f5f9", color: "#94a3b8" },
-  REGISTRATION_OPEN:  { bg: "#dbeafe", color: "#2563eb" },
-  REGISTRATION_CLOSED:{ bg: "#fef9c3", color: "#92400e" },
-  SEEDING:            { bg: "#fef9c3", color: "#92400e" },
-  IN_PROGRESS:        { bg: "#dcfce7", color: G },
-  COMPLETED:          { bg: "#f1f5f9", color: "#64748b" },
-  CANCELLED:          { bg: "#fee2e2", color: "#dc2626" },
-};
+const FALLBACK = STATUS.COMPLETED;
 
 function StatusBadge({ status }: { status: string }) {
-  const s = STATUS_STYLE[status] ?? { bg: "#f1f5f9", color: "#64748b" };
+  const s = STATUS[status] ?? FALLBACK;
   return (
     <span style={{
       display: "inline-flex", alignItems: "center", gap: 5,
-      padding: "3px 10px", borderRadius: 20, fontSize: 11, fontWeight: 700,
-      letterSpacing: "0.04em", textTransform: "uppercase",
-      background: s.bg, color: s.color,
+      padding: "4px 10px", borderRadius: 100, fontSize: 10, fontWeight: 700,
+      letterSpacing: "0.05em", textTransform: "uppercase",
+      background: s.bg, color: s.color, border: `1px solid ${s.border}`,
+      whiteSpace: "nowrap", flexShrink: 0,
     }}>
-      {s.dot && <span style={{ width: 6, height: 6, borderRadius: "50%", background: s.color, animation: "pulse 1.4s infinite", display: "inline-block" }} />}
-      {STATUS_LABEL[status] ?? status}
+      {s.dot && (
+        <span style={{ width: 5, height: 5, borderRadius: "50%", background: s.color, flexShrink: 0, animation: "pulse-dot 1.5s infinite" }} />
+      )}
+      {s.label}
     </span>
   );
 }
@@ -51,225 +100,224 @@ function StatusBadge({ status }: { status: string }) {
 export default async function PublicTorneosPage({
   searchParams,
 }: {
-  searchParams: Promise<{ q?: string; bienvenido?: string }>;
+  searchParams: Promise<{ q?: string; status?: string; page?: string; bienvenido?: string }>;
 }) {
-  const { q, bienvenido } = await searchParams;
-  const [featured, tournaments] = await Promise.all([
-    getPublicFeaturedTournament(),
-    getPublicTournaments(q?.trim()),
+  const { q, status, page: pageStr, bienvenido } = await searchParams;
+  const page = Math.max(1, parseInt(pageStr ?? "1") || 1);
+
+  const organizerId = scopedOrg();
+  const [sliderTournaments, { tournaments, total, pageSize }] = await Promise.all([
+    getPublicSliderTournaments(organizerId),
+    getPublicTournamentsPage({ search: q?.trim(), status: status || undefined, page, organizerId }),
   ]);
 
-  const others = q
-    ? tournaments
-    : tournaments.filter((t) => t.id !== featured?.id);
+  const totalPages = Math.ceil(total / pageSize);
 
-  const startFmt = (d: Date | string) =>
-    new Date(d).toLocaleDateString("es-AR", { day: "numeric", month: "short" });
-  const endFmt = (d: Date | string) =>
-    new Date(d).toLocaleDateString("es-AR", { day: "numeric", month: "short", year: "numeric" });
+  const filterHref = (s: string) => {
+    const p = new URLSearchParams();
+    if (s) p.set("status", s);
+    if (q) p.set("q", q);
+    return plink(`/torneos${p.toString() ? `?${p.toString()}` : ""}`);
+  };
+
+  const pageHref = (p: number) => {
+    const params = new URLSearchParams();
+    if (status) params.set("status", status);
+    if (q) params.set("q", q);
+    if (p > 1) params.set("page", String(p));
+    return plink(`/torneos${params.toString() ? `?${params.toString()}` : ""}`);
+  };
+
+  const dateFmt = (d: Date | string, short = false) =>
+    new Date(d).toLocaleDateString("es-AR", short
+      ? { day: "numeric", month: "short" }
+      : { day: "numeric", month: "short", year: "numeric" }
+    );
+
+  // Pagination ellipsis
+  const pageNumbers: (number | "…")[] = [];
+  if (totalPages <= 7) {
+    for (let i = 1; i <= totalPages; i++) pageNumbers.push(i);
+  } else {
+    pageNumbers.push(1);
+    if (page > 3) pageNumbers.push("…");
+    for (let i = Math.max(2, page - 1); i <= Math.min(totalPages - 1, page + 1); i++) pageNumbers.push(i);
+    if (page < totalPages - 2) pageNumbers.push("…");
+    pageNumbers.push(totalPages);
+  }
+
+  const btnBase: CSSProperties = {
+    display: "inline-flex", alignItems: "center", justifyContent: "center",
+    height: 36, minWidth: 36, padding: "0 12px", borderRadius: 100,
+    fontSize: 13, fontWeight: 600, textDecoration: "none",
+    border: "1px solid rgba(255,255,255,0.08)",
+    background: "rgba(255,255,255,0.04)", color: "#64748b",
+    transition: "all .15s",
+  };
 
   return (
     <div>
-      {/* Welcome banner */}
+      {/* ── Welcome ── */}
       {bienvenido === "1" && (
-        <div style={{ background: "#f0fdf4", borderBottom: "1px solid #bbf7d0" }}>
-          <div style={{ maxWidth: MAX, margin: "0 auto", padding: "12px 24px", display: "flex", alignItems: "center", gap: 12 }}>
+        <div style={{ background: "rgba(163,230,53,0.08)", borderBottom: "1px solid rgba(163,230,53,0.15)" }}>
+          <div style={{ maxWidth: MAX, margin: "0 auto", padding: "12px 24px", display: "flex", alignItems: "center", gap: 10 }}>
             <span style={{ fontSize: 18 }}>🎾</span>
-            <p style={{ fontSize: 13, fontWeight: 600, color: "#15803d" }}>
-              ¡Bienvenido a PádelPro! Tu cuenta fue creada exitosamente.
-            </p>
+            <p style={{ fontSize: 13, fontWeight: 600, color: ACCENT }}>¡Bienvenido a PádelPro! Tu cuenta fue creada exitosamente.</p>
           </div>
         </div>
       )}
 
-      {/* ── Hero: featured tournament ── */}
-      {featured && !q && (
-        <div style={{
-          position: "relative", overflow: "hidden",
-          background: "linear-gradient(135deg, #0f172a 0%, #1a2744 55%, #14532d 100%)",
-          padding: "52px 0 44px",
-        }}>
-          <div style={{
-            position: "absolute", inset: 0, pointerEvents: "none",
-            backgroundImage: "radial-gradient(circle at 80% 50%, rgba(163,230,53,.06) 0%, transparent 60%)",
-          }} />
+      {/* ── Hero slider ── */}
+      {sliderTournaments.length > 0 && !q && (
+        <TorneosSlider tournaments={sliderTournaments} basePath={getPortalScope().basePath} />
+      )}
 
-          <div style={{ position: "relative", maxWidth: MAX, margin: "0 auto", padding: "0 24px" }}>
-            {/* Status + dates */}
-            <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 12 }}>
-              <StatusBadge status={featured.status} />
-              <span style={{ fontSize: 12, color: "#64748b" }}>
-                {startFmt(featured.startDate)} → {endFmt(featured.endDate)}
-              </span>
-            </div>
+      {/* ── Grid section ── */}
+      <div style={{ maxWidth: MAX, margin: "0 auto", padding: "40px 24px" }}>
 
-            {/* Title */}
-            <h1 style={{ fontSize: 42, fontWeight: 800, color: "#fff", marginBottom: 8, fontFamily: "Space Grotesk, sans-serif", lineHeight: 1.1 }}>
-              {featured.name}
-            </h1>
-            {featured.description && (
-              <p style={{ color: "#94a3b8", fontSize: 15, marginBottom: 4, maxWidth: 560 }}>{featured.description}</p>
-            )}
-            <p style={{ color: "#94a3b8", fontSize: 13, marginBottom: 32 }}>
-              📍 {featured.organizer.name}
-            </p>
+        {/* Section header */}
+        <div style={{ display: "flex", alignItems: "baseline", gap: 12, marginBottom: 24, flexWrap: "wrap" }}>
+          {!q && (
+            <h2 style={{ fontFamily: "var(--font-space), sans-serif", fontSize: 20, fontWeight: 800, color: "#f8fafc", flexShrink: 0 }}>
+              {status ? (FILTER_LABEL[status] ?? "Torneos") : "Torneos"}
+            </h2>
+          )}
+          <span style={{ fontSize: 13, color: "#475569", fontWeight: 500 }}>
+            {q
+              ? `${total} resultado${total !== 1 ? "s" : ""} para "${q}"`
+              : `${total} torneo${total !== 1 ? "s" : ""}`}
+          </span>
+        </div>
 
-            {/* Category cards */}
-            {featured.categories.length > 0 && (
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))", gap: 10, marginBottom: 32 }}>
-                {featured.categories.map((tc) => {
-                  const approved = tc._count.registrations;
-                  const pct = tc.maxTeams > 0 ? Math.min(100, Math.round((approved / tc.maxTeams) * 100)) : 0;
-                  const barColor = pct >= 100 ? "#dc2626" : pct > 75 ? "#f97316" : G;
-                  const cs = CAT_STATUS[tc.status] ?? { bg: "#f1f5f9", color: "#64748b" };
-                  const available = tc.maxTeams - approved;
-                  const catLabel = tc.status === "REGISTRATION_OPEN" ? "Abierta" :
-                    tc.status === "REGISTRATION_CLOSED" ? "Cerrada" :
-                    tc.status === "IN_PROGRESS" ? "En curso" :
-                    tc.status === "COMPLETED" ? "Finalizada" : tc.status;
-                  return (
-                    <Link
-                      key={tc.id}
-                      href={`/torneos/${featured.id}/categorias/${tc.id}`}
-                      style={{
-                        display: "block", borderRadius: 12, padding: "14px",
-                        background: "rgba(255,255,255,0.06)",
-                        backdropFilter: "blur(6px)",
-                        border: "1px solid rgba(255,255,255,0.09)",
-                        textDecoration: "none", transition: "background .15s",
-                      }}
-                    >
-                      <div style={{ fontSize: 12, color: "#94a3b8", fontWeight: 500, marginBottom: 8 }}>
-                        {tc.category.name}
-                      </div>
-                      <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
-                        <div style={{ flex: 1, height: 6, background: "#334155", borderRadius: 6, overflow: "hidden" }}>
-                          <div style={{ height: "100%", width: `${pct}%`, background: barColor, borderRadius: 6 }} />
-                        </div>
-                        <span style={{ fontSize: 11, color: "#64748b" }}>{approved}/{tc.maxTeams}</span>
-                      </div>
-                      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                        <span style={{
-                          fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.05em",
-                          padding: "2px 8px", borderRadius: 20,
-                          background: cs.bg + "33", color: cs.color,
-                        }}>
-                          {catLabel}
-                        </span>
-                        <span style={{ fontSize: 11, color: "#64748b" }}>
-                          {available > 0 ? `${available} libre${available !== 1 ? "s" : ""}` : "Sin cupo"}
-                        </span>
-                      </div>
-                    </Link>
-                  );
-                })}
-              </div>
-            )}
-
-            {/* Actions */}
-            <div style={{ display: "flex", gap: 10 }}>
-              <Link
-                href={`/torneos/${featured.id}`}
-                style={{
-                  display: "inline-flex", alignItems: "center", gap: 6,
-                  height: 40, padding: "0 20px", borderRadius: 10,
-                  background: G, color: "#fff", fontSize: 13, fontWeight: 700,
-                  textDecoration: "none", boxShadow: "0 2px 12px rgba(22,163,74,.35)",
-                }}
-              >
-                Ver torneo →
-              </Link>
-              {featured.status === "REGISTRATION_OPEN" && (
+        {/* Filter pills */}
+        {!q && (
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 32 }}>
+            {FILTER_TABS.map((tab) => {
+              const isActive = tab.value === (status ?? "");
+              return (
                 <Link
-                  href={`/torneos/${featured.id}`}
+                  key={tab.value}
+                  href={filterHref(tab.value)}
                   style={{
-                    display: "inline-flex", alignItems: "center", gap: 6,
-                    height: 40, padding: "0 20px", borderRadius: 10,
-                    background: "rgba(255,255,255,0.12)", color: "#fff",
-                    border: "1px solid rgba(255,255,255,0.2)",
-                    fontSize: 13, fontWeight: 700, textDecoration: "none",
+                    display: "inline-flex", alignItems: "center",
+                    padding: "7px 18px", borderRadius: 100, fontSize: 13, fontWeight: 600,
+                    textDecoration: "none", transition: "all .15s",
+                    background: isActive ? ACCENT : "rgba(255,255,255,0.05)",
+                    color: isActive ? "#080e1a" : "#64748b",
+                    border: `1px solid ${isActive ? "transparent" : "rgba(255,255,255,0.08)"}`,
+                    boxShadow: isActive ? "0 0 20px rgba(163,230,53,0.3)" : "none",
                   }}
                 >
-                  ✍ Pre-inscribirse
+                  {tab.label}
                 </Link>
-              )}
-            </div>
+              );
+            })}
           </div>
-        </div>
-      )}
-
-      {/* ── Other tournaments ── */}
-      <div style={{ maxWidth: MAX, margin: "0 auto", padding: "40px 24px" }}>
-        {!q && others.length > 0 && (
-          <h2 style={{ fontSize: 17, fontWeight: 700, color: "#0f172a", fontFamily: "Space Grotesk, sans-serif", marginBottom: 20 }}>
-            {featured ? "Otros torneos" : "Torneos"}
-          </h2>
-        )}
-        {q && (
-          <p style={{ fontSize: 13, color: "#64748b", marginBottom: 20 }}>
-            {others.length === 0
-              ? `Sin resultados para "${q}"`
-              : `${others.length} resultado${others.length !== 1 ? "s" : ""} para "${q}"`}
-          </p>
         )}
 
-        {others.length === 0 && !q && !featured ? (
-          <div style={{ display: "flex", flexDirection: "column", alignItems: "center", padding: "96px 0", textAlign: "center" }}>
-            <div style={{ fontSize: 48, marginBottom: 16, opacity: 0.2 }}>🌐</div>
-            <h3 style={{ fontSize: 16, fontWeight: 700, color: "#0f172a", fontFamily: "Space Grotesk, sans-serif" }}>
-              Sin torneos publicados
-            </h3>
-            <p style={{ fontSize: 13, color: "#94a3b8", marginTop: 8 }}>
-              Los torneos aparecerán aquí cuando sean publicados.
+        {/* Empty state */}
+        {tournaments.length === 0 ? (
+          <div style={{ textAlign: "center", padding: "80px 0" }}>
+            <div style={{ fontSize: 56, marginBottom: 16, opacity: 0.12 }}>🎾</div>
+            <h3 style={{ fontSize: 17, fontWeight: 700, color: "#64748b", fontFamily: "var(--font-space), sans-serif", marginBottom: 8 }}>Sin torneos</h3>
+            <p style={{ fontSize: 14, color: "#475569" }}>
+              {status ? "No hay torneos con este estado." : q ? `Sin resultados para "${q}".` : "Los torneos aparecerán aquí cuando sean publicados."}
             </p>
+            {status && (
+              <Link href={plink("/torneos")} style={{ display: "inline-block", marginTop: 20, fontSize: 13, color: ACCENT, fontWeight: 700, textDecoration: "none" }}>
+                ← Ver todos
+              </Link>
+            )}
           </div>
         ) : (
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))", gap: 16 }}>
-            {others.map((t) => {
-              const topBar =
-                t.status === "IN_PROGRESS" ? G :
-                t.status === "REGISTRATION_OPEN" ? "#3b82f6" : "#e2e8f0";
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))", gap: 20, marginBottom: 40 }}>
+            {tournaments.map((t, i) => {
+              const s = STATUS[t.status] ?? FALLBACK;
+              const delayClass = i < 6 ? `card-d${i}` : "";
               return (
                 <Link
                   key={t.id}
-                  href={`/torneos/${t.id}`}
-                  style={{
-                    display: "block", borderRadius: 16, background: "#fff",
-                    border: "1px solid #e2e8f0", overflow: "hidden",
-                    boxShadow: "0 1px 4px rgba(0,0,0,0.04)",
-                    textDecoration: "none", transition: "box-shadow .15s, transform .15s",
-                  }}
+                  href={plink(`/torneos/${t.id}`)}
+                  className={`t-card card-animate ${delayClass}`}
                 >
-                  <div style={{ height: 4, background: topBar }} />
-                  <div style={{ padding: 20 }}>
-                    <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 8, marginBottom: 8 }}>
-                      <h3 style={{ fontSize: 15, fontWeight: 700, color: "#0f172a", fontFamily: "Space Grotesk, sans-serif", lineHeight: 1.3 }}>
-                        {t.name}
-                      </h3>
+                  {/* ── Card Header Zone — status color gradient ── */}
+                  <div style={{
+                    padding: "18px 20px 16px",
+                    background: s.hero,
+                    borderBottom: "1px solid rgba(255,255,255,0.05)",
+                  }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 8, marginBottom: 12 }}>
                       <StatusBadge status={t.status} />
+                      <span style={{ fontSize: 10, color: "rgba(255,255,255,0.28)", fontWeight: 500, letterSpacing: "0.05em", textTransform: "uppercase", textAlign: "right", lineHeight: 1.3 }}>
+                        {t.organizer.name}
+                      </span>
                     </div>
-                    <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12, color: "#94a3b8", marginBottom: 4 }}>
-                      📍 {t.organizer.name}
+                    <h3 style={{
+                      fontSize: 18, fontWeight: 800, color: "#f8fafc",
+                      fontFamily: "var(--font-space), sans-serif", lineHeight: 1.25,
+                    }}>
+                      {t.name}
+                    </h3>
+                  </div>
+
+                  {/* ── Card Body ── */}
+                  <div style={{ padding: "14px 20px 0" }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12, color: "#64748b" }}>
+                      <span style={{ color: "#475569" }}>📅</span>
+                      <span>{dateFmt(t.startDate, true)} → {dateFmt(t.endDate)}</span>
                     </div>
-                    <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12, color: "#94a3b8", marginBottom: 16 }}>
-                      📅 {startFmt(t.startDate)} → {endFmt(t.endDate)}
+                  </div>
+
+                  {/* ── Card Footer ── */}
+                  <div style={{
+                    padding: "12px 20px 18px",
+                    display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8,
+                  }}>
+                    <div style={{ display: "flex", gap: 5, flexWrap: "wrap" }}>
+                      {t.categories.slice(0, 3).map((tc) => (
+                        <span key={tc.id} style={{
+                          fontSize: 11, padding: "3px 9px", borderRadius: 100,
+                          background: "rgba(255,255,255,0.05)",
+                          color: "#64748b", border: "1px solid rgba(255,255,255,0.07)",
+                        }}>
+                          {tc.category.name}
+                        </span>
+                      ))}
+                      {t.categories.length > 3 && (
+                        <span style={{ fontSize: 11, color: "#475569", padding: "3px 0" }}>
+                          +{t.categories.length - 3}
+                        </span>
+                      )}
                     </div>
-                    {t.categories.length > 0 && (
-                      <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
-                        {t.categories.map((tc) => (
-                          <span key={tc.id} style={{
-                            fontSize: 11, padding: "3px 10px", borderRadius: 20,
-                            background: "#f8fafc", color: "#64748b", border: "1px solid #f1f5f9",
-                          }}>
-                            {tc.category.name}
-                          </span>
-                        ))}
-                      </div>
-                    )}
+                    <span style={{ fontSize: 12, color: s.color, fontWeight: 700, flexShrink: 0 }}>
+                      Ver →
+                    </span>
                   </div>
                 </Link>
               );
             })}
+          </div>
+        )}
+
+        {/* Pagination */}
+        {totalPages > 1 && (
+          <div style={{ display: "flex", justifyContent: "center", alignItems: "center", gap: 6 }}>
+            {page > 1
+              ? <Link href={pageHref(page - 1)} style={btnBase}>← Anterior</Link>
+              : <span style={{ ...btnBase, opacity: 0.3 }}>← Anterior</span>}
+
+            {pageNumbers.map((n, i) =>
+              n === "…"
+                ? <span key={`e-${i}`} style={{ color: "#475569", fontSize: 13, padding: "0 4px" }}>…</span>
+                : <Link key={n} href={pageHref(n)} style={{
+                    ...btnBase,
+                    ...(n === page ? { background: ACCENT, color: "#080e1a", border: "none", fontWeight: 800, boxShadow: "0 0 16px rgba(163,230,53,0.35)" } : {}),
+                  }}>{n}</Link>
+            )}
+
+            {page < totalPages
+              ? <Link href={pageHref(page + 1)} style={btnBase}>Siguiente →</Link>
+              : <span style={{ ...btnBase, opacity: 0.3 }}>Siguiente →</span>}
           </div>
         )}
       </div>

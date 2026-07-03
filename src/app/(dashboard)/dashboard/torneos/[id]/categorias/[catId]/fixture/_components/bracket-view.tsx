@@ -11,6 +11,12 @@ type MatchTeam   = BracketMatch["teams"][number];
 
 const A = "#a3e635";
 
+// Vibrant surfaces
+const PANEL   = "rgba(10,18,38,0.7)";
+const CARD    = "rgba(8,16,36,0.92)";
+const BD      = "rgba(255,255,255,0.07)";
+const BD_SOFT = "rgba(255,255,255,0.05)";
+
 function buildRoundLabels(n: number): string[] {
   if (n === 1) return ["Final"];
   if (n === 2) return ["Semifinal", "Final"];
@@ -27,23 +33,21 @@ export function BracketView({ stage, returnPath }: { stage: Stage; returnPath: s
 
   if (nodes.length === 0) {
     return (
-      <div style={{ background: "oklch(16% 0.012 250)", borderRadius: 14, border: "1px solid var(--border-default)", padding: "48px 24px", textAlign: "center" }}>
-        <p style={{ color: "var(--text-faint)", fontSize: 14 }}>El cuadro aún no tiene partidos asignados.</p>
+      <div style={{ background: PANEL, borderRadius: 16, border: `1px solid ${BD}`, padding: "48px 24px", textAlign: "center", backdropFilter: "blur(16px)" }}>
+        <p style={{ color: "#475569", fontSize: 14 }}>El cuadro aún no tiene partidos asignados.</p>
       </div>
     );
   }
 
-  // Group by round
   const roundMap = new Map<number, BracketNode[]>();
   for (const node of nodes) {
     if (!roundMap.has(node.round)) roundMap.set(node.round, []);
     roundMap.get(node.round)!.push(node);
   }
-  const rounds     = Array.from(roundMap.keys()).sort((a, b) => b - a); // highest first
+  const rounds     = Array.from(roundMap.keys()).sort((a, b) => b - a);
   const numRounds  = rounds.length;
   const roundLabels = buildRoundLabels(numRounds);
 
-  // Progress per round
   const progress = rounds.map((r, i) => {
     const rNodes    = roundMap.get(r) ?? [];
     const withMatch = rNodes.filter((n) => n.match);
@@ -52,26 +56,25 @@ export function BracketView({ stage, returnPath }: { stage: Stage; returnPath: s
     return { label: roundLabels[i], done, partial, count: withMatch.length };
   });
 
-  // Champion
   const finalNode = (roundMap.get(1) ?? [])[0];
   const champion  = finalNode?.team;
 
   return (
-    <div style={{ background: "oklch(16% 0.012 250)", borderRadius: 14, border: "1px solid var(--border-default)", overflow: "hidden" }}>
+    <div style={{ background: PANEL, borderRadius: 18, border: `1px solid ${BD}`, overflow: "hidden", backdropFilter: "blur(16px)", boxShadow: "0 4px 24px rgba(0,0,0,0.35)" }}>
 
       {/* Header */}
-      <div style={{ padding: "14px 20px", borderBottom: "1px solid var(--border-subtle)", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
-        <span style={{ fontFamily: "Space Grotesk, sans-serif", fontWeight: 700, fontSize: 15, color: "var(--text-primary)" }}>
+      <div style={{ padding: "16px 22px", borderBottom: `1px solid ${BD}`, display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
+        <span style={{ fontFamily: "var(--font-space), sans-serif", fontWeight: 800, fontSize: 16, color: "#f8fafc" }}>
           {stage.name}
         </span>
         <div style={{ display: "flex", gap: 14 }}>
           {[
             { color: A,          label: "Jugado"     },
             { color: "#fbbf24",  label: "En curso"   },
-            { color: "#3b82f6",  label: "Programado" },
+            { color: "#38bdf8",  label: "Programado" },
             { color: "#334155",  label: "Pendiente"  },
           ].map((s) => (
-            <span key={s.label} style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 11, color: "var(--text-faint)" }}>
+            <span key={s.label} style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 11, color: "#64748b" }}>
               <span style={{ width: 7, height: 7, borderRadius: "50%", background: s.color, flexShrink: 0 }} />
               {s.label}
             </span>
@@ -80,38 +83,37 @@ export function BracketView({ stage, returnPath }: { stage: Stage; returnPath: s
       </div>
 
       {/* Progress bar */}
-      <div style={{ display: "flex", background: "oklch(14% 0.012 250)", borderBottom: "1px solid var(--border-subtle)" }}>
+      <div style={{ display: "flex", background: "rgba(255,255,255,0.02)", borderBottom: `1px solid ${BD}` }}>
         {progress.map((r, i) => (
           <div key={i} style={{
             flex: 1, padding: "12px 16px",
-            borderRight: i < progress.length - 1 ? "1px solid var(--border-subtle)" : "none",
+            borderRight: i < progress.length - 1 ? `1px solid ${BD_SOFT}` : "none",
             display: "flex", alignItems: "center", gap: 8,
           }}>
             <div style={{
-              width: 24, height: 24, borderRadius: 7, flexShrink: 0,
-              background: r.done ? "rgba(163,230,53,.2)" : r.partial ? "rgba(251,191,36,.15)" : "oklch(22% 0.01 250)",
-              border: `1px solid ${r.done ? "rgba(163,230,53,.4)" : r.partial ? "rgba(251,191,36,.3)" : "oklch(28% 0.01 250)"}`,
+              width: 26, height: 26, borderRadius: 8, flexShrink: 0,
+              background: r.done ? "rgba(163,230,53,.18)" : r.partial ? "rgba(251,191,36,.14)" : "rgba(255,255,255,0.05)",
+              border: `1px solid ${r.done ? "rgba(163,230,53,.4)" : r.partial ? "rgba(251,191,36,.3)" : "rgba(255,255,255,0.08)"}`,
               display: "flex", alignItems: "center", justifyContent: "center",
-              fontSize: 11, fontWeight: 800, fontFamily: "Space Grotesk, sans-serif",
-              color: r.done ? A : r.partial ? "#fbbf24" : "var(--text-darkest)",
+              fontSize: 12, fontWeight: 900, fontFamily: "var(--font-space), sans-serif",
+              color: r.done ? A : r.partial ? "#fbbf24" : "#334155",
             }}>
               {r.done ? "✓" : i + 1}
             </div>
             <div>
-              <div style={{ fontSize: 12, fontWeight: 700, color: r.done ? A : r.partial ? "#fbbf24" : "var(--text-faint)" }}>{r.label}</div>
-              <div style={{ fontSize: 10, color: "var(--text-darkest)" }}>{r.count} partido{r.count !== 1 ? "s" : ""}</div>
+              <div style={{ fontSize: 12, fontWeight: 800, color: r.done ? A : r.partial ? "#fbbf24" : "#64748b" }}>{r.label}</div>
+              <div style={{ fontSize: 10, color: "#334155" }}>{r.count} partido{r.count !== 1 ? "s" : ""}</div>
             </div>
           </div>
         ))}
-        {/* Champion placeholder in progress bar */}
         <div style={{ width: 96, padding: "12px 14px", display: "flex", alignItems: "center", gap: 8 }}>
           <div style={{
-            width: 24, height: 24, borderRadius: 7,
-            background: champion ? "rgba(251,191,36,.15)" : "oklch(22% 0.01 250)",
-            border: `1px solid ${champion ? "rgba(251,191,36,.3)" : "oklch(28% 0.01 250)"}`,
+            width: 26, height: 26, borderRadius: 8,
+            background: champion ? "rgba(251,191,36,.15)" : "rgba(255,255,255,0.05)",
+            border: `1px solid ${champion ? "rgba(251,191,36,.3)" : "rgba(255,255,255,0.08)"}`,
             display: "flex", alignItems: "center", justifyContent: "center", fontSize: 13,
           }}>🏆</div>
-          <div style={{ fontSize: 11, fontWeight: 700, color: "var(--text-faint)" }}>Campeón</div>
+          <div style={{ fontSize: 11, fontWeight: 800, color: "#64748b" }}>Campeón</div>
         </div>
       </div>
 
@@ -125,8 +127,8 @@ export function BracketView({ stage, returnPath }: { stage: Stage; returnPath: s
 
             return (
               <div key={round} style={{ width: 260, flexShrink: 0, display: "flex", flexDirection: "column" }}>
-                <div style={{ padding: "8px 14px 12px", textAlign: "center" }}>
-                  <span style={{ fontSize: 11, fontWeight: 700, color: "var(--text-faint)", textTransform: "uppercase", letterSpacing: "0.09em" }}>
+                <div style={{ padding: "8px 14px 14px", textAlign: "center" }}>
+                  <span style={{ fontSize: 11, fontWeight: 800, color: colIdx === rounds.length - 1 ? A : "#64748b", textTransform: "uppercase", letterSpacing: "0.1em" }}>
                     {roundLabels[colIdx]}
                   </span>
                 </div>
@@ -145,19 +147,20 @@ export function BracketView({ stage, returnPath }: { stage: Stage; returnPath: s
           {/* Champion column */}
           <div style={{ width: 108, flexShrink: 0, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", paddingTop: 36 }}>
             <div style={{
-              width: 88, padding: "16px 10px", textAlign: "center",
-              background: champion ? "rgba(251,191,36,.12)" : "oklch(18% 0.012 250)",
-              border: `1px solid ${champion ? "rgba(251,191,36,.3)" : "var(--border-default)"}`,
-              borderRadius: 12,
+              width: 92, padding: "18px 10px", textAlign: "center",
+              background: champion ? "linear-gradient(180deg, rgba(251,191,36,.18), rgba(251,191,36,.04))" : "rgba(255,255,255,0.03)",
+              border: `1px solid ${champion ? "rgba(251,191,36,.35)" : BD}`,
+              borderRadius: 14,
+              boxShadow: champion ? "0 0 24px rgba(251,191,36,0.12)" : "none",
             }}>
-              <div style={{ fontSize: 28, marginBottom: 6 }}>🏆</div>
-              <div style={{ fontSize: 10, fontWeight: 700, color: "var(--text-faint)", textTransform: "uppercase", letterSpacing: "0.07em", marginBottom: 8 }}>Campeón</div>
+              <div style={{ fontSize: 30, marginBottom: 6 }}>🏆</div>
+              <div style={{ fontSize: 10, fontWeight: 800, color: "#64748b", textTransform: "uppercase", letterSpacing: "0.07em", marginBottom: 8 }}>Campeón</div>
               {champion ? (
-                <div style={{ fontSize: 11, fontWeight: 700, color: "#fbbf24", lineHeight: 1.4 }}>
+                <div style={{ fontSize: 11, fontWeight: 800, color: "#fbbf24", lineHeight: 1.4, fontFamily: "var(--font-space), sans-serif" }}>
                   {champion.players.map((p) => p.playerProfile.lastName).join(" / ")}
                 </div>
               ) : (
-                <div style={{ fontSize: 10, color: "var(--text-darkest)", fontStyle: "italic" }}>Por definir</div>
+                <div style={{ fontSize: 10, color: "#334155", fontStyle: "italic" }}>Por definir</div>
               )}
             </div>
           </div>
@@ -176,17 +179,17 @@ function BracketNodeCard({ node, returnPath }: { node: BracketNode; returnPath: 
   if (node.isBye && node.team) {
     const names = node.team.players.map((p) => p.playerProfile.lastName);
     return (
-      <div style={{ borderRadius: 12, border: "1px dashed rgba(163,230,53,.3)", background: "oklch(18% 0.012 250)", padding: "14px 12px", minHeight: 72, display: "flex", flexDirection: "column", justifyContent: "center" }}>
-        <div style={{ fontSize: 12, fontWeight: 700, color: A }}>{names.join(" / ")}</div>
-        <div style={{ fontSize: 10, color: "var(--text-faint)", marginTop: 2 }}>BYE</div>
+      <div style={{ borderRadius: 12, border: "1px dashed rgba(163,230,53,.3)", background: "rgba(163,230,53,0.05)", padding: "14px 12px", minHeight: 72, display: "flex", flexDirection: "column", justifyContent: "center" }}>
+        <div style={{ fontSize: 12, fontWeight: 800, color: A }}>{names.join(" / ")}</div>
+        <div style={{ fontSize: 10, color: A, marginTop: 2, opacity: 0.7, fontWeight: 700 }}>BYE</div>
       </div>
     );
   }
 
   if (!match) {
     return (
-      <div style={{ minHeight: 72, borderRadius: 12, background: "oklch(15% 0.01 250)", border: "1px dashed oklch(24% 0.01 250)", display: "flex", alignItems: "center", justifyContent: "center" }}>
-        <span style={{ fontSize: 12, color: "var(--text-darkest)", fontStyle: "italic" }}>Por definir</span>
+      <div style={{ minHeight: 72, borderRadius: 12, background: "rgba(255,255,255,0.02)", border: "1px dashed rgba(255,255,255,0.07)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+        <span style={{ fontSize: 12, color: "#334155", fontStyle: "italic" }}>Por definir</span>
       </div>
     );
   }
@@ -196,7 +199,7 @@ function BracketNodeCard({ node, returnPath }: { node: BracketNode; returnPath: 
   const completed = match.status === "COMPLETED" || match.status === "WALKOVER";
   const inProgress = match.status === "IN_PROGRESS";
   const winnerId  = match.result?.winnerId ?? undefined;
-  const statusColor = completed ? A : inProgress ? "#fbbf24" : "#3b82f6";
+  const statusColor = completed ? A : inProgress ? "#fbbf24" : "#38bdf8";
   const score = completed && match.sets.length > 0
     ? match.sets.map((s) => `${s.games1}-${s.games2}`).join(", ")
     : null;
@@ -208,32 +211,32 @@ function BracketNodeCard({ node, returnPath }: { node: BracketNode; returnPath: 
         onMouseLeave={() => setHover(false)}
         style={{
           borderRadius: 12, overflow: "hidden",
-          background: "oklch(18% 0.012 250)",
-          border: `1px solid ${hover ? statusColor + "55" : "oklch(26% 0.01 250)"}`,
-          boxShadow: inProgress ? "0 0 0 2px rgba(251,191,36,.25)" : hover ? "0 4px 16px rgba(0,0,0,.4)" : "none",
+          background: CARD,
+          border: `1px solid ${hover ? statusColor + "66" : completed ? "rgba(163,230,53,0.18)" : BD}`,
+          boxShadow: inProgress ? "0 0 0 2px rgba(251,191,36,.25)" : hover ? "0 6px 20px rgba(0,0,0,.45)" : "none",
           transition: "all .12s",
         }}
       >
         <NodeTeamRow mt={side1} winnerId={winnerId} completed={completed} />
-        <div style={{ height: 1, background: "oklch(22% 0.01 250)" }} />
+        <div style={{ height: 1, background: BD_SOFT }} />
         <NodeTeamRow mt={side2} winnerId={winnerId} completed={completed} />
 
         {/* Footer */}
-        <div style={{ padding: "6px 12px", borderTop: "1px solid oklch(20% 0.01 250)", background: "oklch(15% 0.01 250)", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 6 }}>
+        <div style={{ padding: "7px 12px", borderTop: `1px solid ${BD_SOFT}`, background: "rgba(0,0,0,0.2)", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 6 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
-            <span style={{ width: 6, height: 6, borderRadius: "50%", background: statusColor, flexShrink: 0 }} />
-            <span style={{ fontSize: 10, color: "var(--text-darkest)" }}>
+            <span style={{ width: 6, height: 6, borderRadius: "50%", background: statusColor, flexShrink: 0, ...(inProgress ? { animation: "vib-live 1.2s infinite" } : {}) }} />
+            <span style={{ fontSize: 10, color: "#475569" }}>
               {completed ? "Jugado" : inProgress ? "En curso" : "Programado"}
             </span>
           </div>
           <div style={{ display: "flex", gap: 4, alignItems: "center" }}>
             {score && (
-              <span style={{ fontSize: 10, fontWeight: 700, color: "var(--text-faint)", fontFamily: "Space Grotesk, sans-serif" }}>{score}</span>
+              <span style={{ fontSize: 11, fontWeight: 800, color: "#94a3b8", fontFamily: "var(--font-space), sans-serif" }}>{score}</span>
             )}
             {!completed && side1 && side2 && (
               <button
                 onClick={() => setModalOpen(true)}
-                style={{ fontSize: 9, padding: "2px 7px", borderRadius: 5, border: "1px solid rgba(163,230,53,.3)", background: "rgba(163,230,53,.1)", color: A, cursor: "pointer", fontFamily: "inherit", fontWeight: 700 }}
+                style={{ fontSize: 9, padding: "3px 9px", borderRadius: 6, border: "none", background: A, color: "#080e1a", cursor: "pointer", fontFamily: "inherit", fontWeight: 800, boxShadow: "0 0 12px rgba(163,230,53,0.25)" }}
               >
                 Cargar
               </button>
@@ -241,7 +244,7 @@ function BracketNodeCard({ node, returnPath }: { node: BracketNode; returnPath: 
             {completed && (
               <button
                 onClick={() => setEditOpen(true)}
-                style={{ fontSize: 9, padding: "2px 7px", borderRadius: 5, border: "1px solid oklch(28% 0.01 250)", background: "transparent", color: "var(--text-faint)", cursor: "pointer", fontFamily: "inherit" }}
+                style={{ fontSize: 9, padding: "3px 9px", borderRadius: 6, border: "1px solid rgba(255,255,255,0.08)", background: "transparent", color: "#64748b", cursor: "pointer", fontFamily: "inherit", fontWeight: 700 }}
               >
                 Editar
               </button>
@@ -261,19 +264,20 @@ function NodeTeamRow({ mt, winnerId, completed }: { mt: MatchTeam | undefined; w
   const names    = mt?.team.players.map((p) => p.playerProfile.lastName) ?? [];
   return (
     <div style={{
-      padding: "10px 12px", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 6,
+      padding: "11px 12px", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 6,
       background: isWinner ? "rgba(163,230,53,.1)" : "transparent",
-      borderLeft: isWinner ? "2px solid rgba(163,230,53,.6)" : "2px solid transparent",
+      borderLeft: isWinner ? "3px solid #a3e635" : "3px solid transparent",
     }}>
       <span style={{
-        fontSize: 12, fontWeight: isWinner ? 700 : 400, flex: 1,
-        color: !mt ? "var(--text-darkest)" : isWinner ? "var(--text-secondary)" : "var(--text-muted)",
+        fontSize: 12, fontWeight: isWinner ? 800 : 500, flex: 1,
+        color: !mt ? "#334155" : isWinner ? "#f1f5f9" : "#94a3b8",
         fontStyle: !mt ? "italic" : "normal",
         overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
+        fontFamily: isWinner ? "var(--font-space), sans-serif" : "inherit",
       }}>
         {mt ? (names.length > 0 ? names.join(" / ") : "—") : "Por definir"}
       </span>
-      {isWinner && <span style={{ fontSize: 10, color: A, flexShrink: 0 }}>✓</span>}
+      {isWinner && <span style={{ fontSize: 12, flexShrink: 0 }}>🏆</span>}
     </div>
   );
 }

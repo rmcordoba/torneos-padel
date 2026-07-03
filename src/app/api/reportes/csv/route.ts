@@ -1,6 +1,6 @@
 import { type NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
-import { getOrganizersByUser } from "@/modules/organizers/queries";
+import { getActiveMembership } from "@/lib/active-organizer";
 import {
   getRegistrationReport,
   getMatchReport,
@@ -22,10 +22,10 @@ export async function GET(req: NextRequest) {
   const session = await auth();
   if (!session?.user) return new NextResponse("No autorizado", { status: 401 });
 
-  const memberships = await getOrganizersByUser(session.user.id);
-  if (!memberships.length) return new NextResponse("Sin organizador", { status: 403 });
+  const membership = await getActiveMembership(session.user.id);
+  if (!membership) return new NextResponse("Sin organizador", { status: 403 });
 
-  const organizerId = memberships[0].organizerId;
+  const organizerId = membership.organizerId;
   const type = req.nextUrl.searchParams.get("type") ?? "inscripciones";
 
   let csv = "";

@@ -54,12 +54,12 @@ export default async function PlayerProfilePage({
       {/* Profile card */}
       <div style={{ background: "var(--bg-surface)", borderRadius: 12, border: "1px solid var(--border-default)", overflow: "hidden" }}>
         <div style={{ padding: "20px 24px", display: "flex", alignItems: "flex-start", gap: 20 }}>
-          <div style={{ width: 56, height: 56, borderRadius: 14, flexShrink: 0, background: "var(--accent-15)", border: "1px solid var(--accent-30)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18, fontWeight: 800, color: "var(--accent)", fontFamily: "Space Grotesk, sans-serif" }}>
+          <div style={{ width: 56, height: 56, borderRadius: 14, flexShrink: 0, background: "var(--accent-15)", border: "1px solid var(--accent-30)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18, fontWeight: 800, color: "var(--accent)", fontFamily: "var(--font-space), sans-serif" }}>
             {initials}
           </div>
           <div style={{ flex: 1, minWidth: 0 }}>
             <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 12 }}>
-              <h1 style={{ fontSize: 18, fontWeight: 700, color: "var(--text-primary)", fontFamily: "Space Grotesk, sans-serif" }}>
+              <h1 style={{ fontSize: 18, fontWeight: 700, color: "var(--text-primary)", fontFamily: "var(--font-space), sans-serif" }}>
                 {player.firstName} {player.lastName}
               </h1>
               <Link href={`/dashboard/jugadores/${player.id}/editar`} style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "6px 12px", borderRadius: 7, background: "var(--bg-elevated)", border: "1px solid var(--border-default)", color: "var(--text-faint)", fontSize: 12, fontWeight: 600, textDecoration: "none", flexShrink: 0 }}>
@@ -100,7 +100,7 @@ export default async function PlayerProfilePage({
             { label: "Parejas", value: player.teamPlayers.length, accent: false },
           ].map((s, i) => (
             <div key={i} style={{ padding: "16px 12px", textAlign: "center", borderRight: i < 2 ? "1px solid var(--border-subtle)" : "none" }}>
-              <p style={{ fontSize: 24, fontWeight: 800, color: s.accent ? "var(--accent)" : "var(--text-primary)", fontFamily: "Space Grotesk, sans-serif" }}>{s.value}</p>
+              <p style={{ fontSize: 24, fontWeight: 800, color: s.accent ? "var(--accent)" : "var(--text-primary)", fontFamily: "var(--font-space), sans-serif" }}>{s.value}</p>
               <p style={{ fontSize: 10, fontWeight: 700, color: "var(--text-dimmer)", marginTop: 4, textTransform: "uppercase", letterSpacing: "0.06em" }}>{s.label}</p>
             </div>
           ))}
@@ -109,7 +109,7 @@ export default async function PlayerProfilePage({
 
       {/* Registration history */}
       <div>
-        <h2 style={{ fontSize: 14, fontWeight: 700, color: "var(--text-primary)", marginBottom: 12, display: "flex", alignItems: "center", gap: 8, fontFamily: "Space Grotesk, sans-serif" }}>
+        <h2 style={{ fontSize: 14, fontWeight: 700, color: "var(--text-primary)", marginBottom: 12, display: "flex", alignItems: "center", gap: 8, fontFamily: "var(--font-space), sans-serif" }}>
           <Trophy size={15} color="var(--accent)" /> Historial de inscripciones
         </h2>
 

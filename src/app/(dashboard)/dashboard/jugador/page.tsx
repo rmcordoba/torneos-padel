@@ -5,6 +5,15 @@ import { getOpenTournaments, getPlayerRegistrations, getPlayerProfile } from "@/
 import { JugadorClient } from "./_components/jugador-client";
 import type { Metadata } from "next";
 
+const MONTHS_SHORT = ["ene","feb","mar","abr","may","jun","jul","ago","sep","oct","nov","dic"];
+
+function fmtDate(d: Date, includeYear = true) {
+  const day   = d.getUTCDate();
+  const month = MONTHS_SHORT[d.getUTCMonth()];
+  const year  = d.getUTCFullYear();
+  return includeYear ? `${day} ${month}. ${year}` : `${day} ${month}.`;
+}
+
 export const metadata: Metadata = { title: "Mi panel" };
 
 export default async function JugadorPage() {
@@ -25,8 +34,8 @@ export default async function JugadorPage() {
     id: t.id,
     name: t.name,
     organizerName: t.organizer.name,
-    startDate: t.startDate.toISOString(),
-    endDate: t.endDate.toISOString(),
+    startDate: fmtDate(t.startDate, false),
+    endDate: fmtDate(t.endDate, true),
     categories: t.categories.map((tc) => ({
       id: tc.id,
       categoryName: tc.category.name,
@@ -51,7 +60,7 @@ export default async function JugadorPage() {
       createdAt: r.createdAt.toISOString(),
       tournamentName: r.tournamentCategory.tournament.name,
       categoryName: r.tournamentCategory.category.name,
-      startDate: r.tournamentCategory.tournament.startDate.toISOString(),
+      startDate: fmtDate(r.tournamentCategory.tournament.startDate),
       partnerName: partners.length > 1 ? partners.filter((_, i) => i !== 0).join(", ") : null,
     };
   });

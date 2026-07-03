@@ -39,13 +39,34 @@ export async function getAllUsers() {
   });
 }
 
-export async function getGlobalAuditLogs(limit = 100) {
+const USER_PAGE_SIZE = 10;
+
+export async function getUsersPage({ page = 1 }: { page?: number } = {}) {
+  const skip = (page - 1) * USER_PAGE_SIZE;
+  const [users, total] = await prisma.$transaction([
+    prisma.user.findMany({
+      orderBy: { createdAt: "desc" },
+      include: {
+        organizerMemberships: {
+          include: { organizer: { select: { name: true } } },
+        },
+      },
+      skip,
+      take: USER_PAGE_SIZE,
+    }),
+    prisma.user.count(),
+  ]);
+  return { users, total, page, pageSize: USER_PAGE_SIZE };
+}
+
+export async function getGlobalAuditLogs(limit = 300) {
   return prisma.auditLog.findMany({
     orderBy: { createdAt: "desc" },
     take: limit,
     include: {
-      user: { select: { name: true, email: true } },
-      organizer: { select: { name: true } },
+      user:       { select: { name: true, email: true } },
+      organizer:  { select: { name: true } },
+      tournament: { select: { name: true } },
     },
   });
 }
